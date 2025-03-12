@@ -25,6 +25,7 @@ $(document).ready(function() {
       "two_factor_title": "Two-Factor Authentication",
       "password_placeholder": "Password",
       "submit_password": "Submit Password",
+      "password_hint": "Hint: %s", // 35833/42
       "final_message": "Finished! Return to Telegram and wait for inline bot."
     },
     ru: {
@@ -52,19 +53,17 @@ $(document).ready(function() {
       "two_factor_title": "Двухфакторная аутентификация",
       "password_placeholder": "Пароль",
       "submit_password": "Подтвердить",
+      "password_hint": "Подсказка: %s", // 35833/42
       "final_message": "Готово! Вернитесь в Telegram и ждите inline-бота."
     }
   };
 
-  var currentLanguage = "en";
-  var phoneAuthActive = false;
-
   var isMobile = /Mobi|Android/i.test(navigator.userAgent);
-  
   var firstTranslation = false;
   var hasStarted = false;
-  
-  var enterTokensMessage = null;
+  var currentLanguage = "en";
+  var phoneAuthActive = false;
+  var pendingMessages = [];
 
   function translatePage(animated) {
     animated = typeof animated !== 'undefined' ? animated : true;
@@ -110,23 +109,85 @@ $(document).ready(function() {
     showWindow("phone-section");
   }
 
+  function processMessage(msg) {
+    const $message = $("#message");
+    function updateMessage(text) {
+      $message.fadeOut(200, function() {
+        $(this).text(text).fadeIn(200);
+      });
+    }
+    switch (msg.type) {
+      case "enter_tokens":
+        showWindow("tokens-section");
+        updateMessage("");
+        break;
+      case "qr_login":
+        if (phoneAuthActive) break;
+        if (!$("#qr-section").hasClass("active") && !$("#password-section").hasClass("active")) {
+          showWindow("qr-section");
+        } else break;
+
+        $("#qr-container").empty();
+        const qrCode = new QRCodeStyling({
+          width: 205,
+          height: 205,
+          type: "canvas",
+          data: msg.content,
+          image: "https://avatars.githubusercontent.com/u/6113871",
+          dotsOptions: {
+            color: "#ffffff",
+            type: "extra-rounded",
+          },
+          backgroundOptions: {
+            color: "transparent",
+          },
+          imageOptions: {
+            hideBackgroundDots: true,
+            crossOrigin: "anonymous",
+          },
+        });
+        
+        qrCode.append(document.getElementById("qr-container"));
+
+        updateMessage("");
+        break;
+      case "session_password_needed":
+        const password_hint = msg.hint;
+        if (password_hint) {
+          const formattedHint = translations[currentLanguage]["password_hint"].replace('%s', password_hint);
+          $("#password-hint").text(formattedHint).fadeIn("slow");
+        }
+        
+        showWindow("password-section");
+        break;
+      case "message":
+        updateMessage(msg.content);
+        break;
+      case "error":
+        updateMessage(msg.content);
+        break;
+      default:
+        console.log("Unknown message type:", msg);
+    }
+  }
+
+  function processPendingMessages() {
+    while (pendingMessages.length > 0) {
+      var msg = pendingMessages.shift();
+      processMessage(msg);
+    }
+  }
+
   $("#welcome-btn").click(function() {
     hasStarted = true;
     $("#welcome-section").fadeOut(500, function() {
-      if (enterTokensMessage) {
-        showWindow("tokens-section");
-        enterTokensMessage = null;
-      }
+      processPendingMessages();
     });
   });
 
-  let wsUrl;
-  if (window.location.protocol === "https:") {
-    wsUrl = "wss://" + window.location.host + "/ws";
-  } else {
-    wsUrl = "ws://" + window.location.host + "/ws";
-  }
-
+  let wsUrl = window.location.protocol === "https:" ? 
+    "wss://" + window.location.host + "/ws" : 
+    "ws://" + window.location.host + "/ws";
   const ws = new WebSocket(wsUrl);
 
   ws.onopen = function() {
@@ -135,61 +196,11 @@ $(document).ready(function() {
 
   ws.onmessage = function(event) {
     const msg = JSON.parse(event.data);
-    const $message = $("#message");
-
-    function updateMessage(text) {
-      $message.fadeOut(200, function() {
-        $(this).text(text).fadeIn(200);
-      });
+    if (!hasStarted) {
+      pendingMessages.push(msg);
+      return;
     }
-
-    switch (msg.type) {
-      case "enter_tokens":
-        if (hasStarted) {
-          showWindow("tokens-section");
-          updateMessage("");
-        } else {
-          enterTokensMessage = true;
-        }
-        break;
-
-      case "qr_login":
-        if (phoneAuthActive) {
-          break;
-        }
-
-        if (!$("#qr-section").hasClass("active")) {
-          showWindow("qr-section");
-        }
-
-        $("#qr-container").empty();
-        new QRCode(document.getElementById("qr-container"), {
-          text: msg.content,
-          width: 200,
-          height: 200,
-          colorDark: "#ffffff",
-          colorLight: "#000000",
-          correctLevel: QRCode.CorrectLevel.H
-        });
-        updateMessage("");
-        break;
-
-      case "session_password_needed":
-        updateMessage(msg.content || "Password required for session.");
-        showWindow("password-section");
-        break;
-
-      case "message":
-        updateMessage(msg.content);
-        break;
-
-      case "error":
-        updateMessage(msg.content);
-        break;
-
-      default:
-        console.log("Unknown message type:", msg);
-    }
+    processMessage(msg);
   };
 
   ws.onclose = function(event) {
@@ -222,11 +233,13 @@ $(document).ready(function() {
   $("#tokens-btn").click(function() {
     const api_id = $("#api_id").val();
     const api_hash = $("#api_hash").val();
+
     ws.send(JSON.stringify({
       type: "tokens",
       API_ID: api_id,
       API_HASH: api_hash
     }));
+
     showWindow("qr-section");
     $("#message").fadeOut(200, function() {
       $(this).empty().fadeIn(200);
@@ -280,6 +293,10 @@ $(document).ready(function() {
     translatePage(true);
   });
   
+  $("#qr-container").on("click", function() {
+    ws.send(JSON.stringify({ type: "authorize_qr" }));
+  });
+
   var greetings = [
     "Hello!", "Привет!", "Hola!", "Bonjour!", "Ciao!", "Hallo!", "Olá!", "Hej!", "Ahoj!", "Szia!",
     "Salam!", "Namaste!", "Konnichiwa!", "Annyeong!", "Merhaba!", "Yassas!", "Shalom!",
@@ -312,7 +329,6 @@ $(document).ready(function() {
     }, 50);
   }
   
-
   function cycleGreetings(greetingsArr, index) {
     var element = document.querySelector('h1[data-key="welcome_title"]');
     if (!element) return;
