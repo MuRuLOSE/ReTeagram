@@ -12,7 +12,7 @@ import asyncio
 
 class TokenManager:
     def __init__(self, loader: ABCLoader):
-        self.loader = loader
+        self._loader = loader
         self.client: CustomClient = loader.client
 
     async def cancel(self, conversation):
@@ -118,14 +118,14 @@ class TokenManager:
                                 break
 
                             if button.text == "»":
-                                callback_data = getattr(button, "data", button.callback_data)
-                                
                                 await asyncio.sleep(0.25)
                                 await self.client.request_callback_answer(
-                                    message.chat.id, message.id, callback_data
+                                    message.chat.id,
+                                    message.id,
+                                    getattr(button, "data", button.callback_data),
                                 )
                                 break
-                            
+
                             if button.text == "«":
                                 bot_username = -1
                                 break

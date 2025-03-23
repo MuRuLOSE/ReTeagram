@@ -55,14 +55,18 @@ class Manager(loader.Module):
     strings = {"name": "Manager"}
 
     async def on_load(self):
-        data = self.database.get("teagram", "restart_info", None)
-        if data:
-            restart_time = round(time() - data["time"])
-            message = await self.client.get_messages(data["chat"], data["id"])
+        try:
+            data = self.database.get("teagram", "restart_info", None)
+            if data:
+                restart_time = round(time() - data["time"])
+                message = await self.client.get_messages(data["chat"], data["id"])
 
-            await utils.answer(
-                message, self.get("restart_success").format(restart_time)
-            )
+                await utils.answer(
+                    message, self.get("restart_success").format(restart_time)
+                )
+        except Exception:
+            logging.exception("Failed to change restart message")
+        finally:
             self.database.pop("teagram", "restart_info")
 
     def check_requirements(self, repo, sha):
