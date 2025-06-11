@@ -56,7 +56,7 @@ class Form:
         self._forms[form_id] = {
             "type": FormType.FORM,
             "text": text,
-            "message": message,
+            # "message": message, dont serialize
             "reply_markup": reply_markup,
             "parse_mode": parse_mode,
             **media,
