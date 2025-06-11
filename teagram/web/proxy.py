@@ -30,7 +30,7 @@ class ProxyTunnel:
 
         self.proxies = [
             (
-                "ssh -R 80:localhost:{} serveo.net",
+                "ssh -o StrictHostKeyChecking=no -R 80:localhost:{} serveo.net",
                 r"Forwarding HTTP traffic from (https://[^\s]+)",
             ),
             (
@@ -54,8 +54,8 @@ class ProxyTunnel:
     async def create_proxy_tunnel(self, proxy: typing.Tuple[str, str]):
         logger.info("Creating proxy tunnel...")
 
-        url_pattern = proxy[0].format(self.port)
-        ssh_command = proxy[1]
+        ssh_command = proxy[0].format(self.port)
+        url_pattern = proxy[1]
 
         self.stream = await asyncio.create_subprocess_shell(
             ssh_command,
@@ -67,9 +67,12 @@ class ProxyTunnel:
         url = ""
 
         async def get_url():
-            for line in iter(self.stream.stdout.readline, ""):
-                line = (await line).decode()
-                await asyncio.sleep(0.3)
+            while True:
+                line = await self.stream.stdout.readline()
+                if not line:
+                    break
+                line = line.decode()
+                logger.debug(f"SSH output: {line}")
 
                 if match := re.search(url_pattern, line):
                     nonlocal url
@@ -80,7 +83,7 @@ class ProxyTunnel:
 
         asyncio.ensure_future(get_url())
         try:
-            await asyncio.wait_for(self.proxy_created.wait(), 5)
+            await asyncio.wait_for(self.proxy_created.wait(), 10)  # увеличьте таймаут
         except Exception:
             pass
 
