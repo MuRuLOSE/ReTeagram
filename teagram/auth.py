@@ -148,6 +148,14 @@ class Authorization:
             return self.client
 
         if not self.no_web:
+            prompt = (
+                "Warning: Using a proxy for the web interface may be unsafe "
+                "(possible Man-in-the-Middle attacks and other risks).\n"
+                "Do you want to continue? (y/n)\n"
+                "If not, please run the program with the --no-web argument: "
+            )
+            if input(prompt).strip().lower() != "y":
+                return await self.authorize()
             return await self._web_authorize()
         elif not self.no_qr:
             return await self._qr_authorize()
