@@ -155,8 +155,6 @@ class Manager(loader.Module):
 
     @loader.command(alias="ch_branch")
     async def change_branch(self, message):
-    @loader.command(alias="dev")
-    async def dev_branch(self, message):
         branch_name = ""
         try:
             repo = git.Repo(os.path.abspath("."))
