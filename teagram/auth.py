@@ -171,6 +171,8 @@ class Authorization:
             exit(64)
         except (errors.AuthKeyUnregistered, AttributeError):
             return False
+        except errors.unauthorized_401.SessionPasswordNeeded:
+            await self.get_password()
         finally:
             try:
                 await self.client.disconnect()
