@@ -34,7 +34,7 @@ help:
 
 info:
   ping: "<b>⚡ Ping: {}ms</b>"
-  hello_world: "<b>👋 Welcome to Teagram-v2!</b>\n<b>To start using userbot, use <code>{}help</code> to get list of commands.</b>"
+  hello_world: "<b>👋 Welcome to Re:Teagram!</b>\n<b>To start using the userbot, type <code>{}help</code> to get the list of commands.</b>\n\n<i>Thanks to the original authors of Teagram. Re:Teagram is a reboot of Teagram v2</i>"
   ram: "RAM"
   cpu: "CPU"
   uptime: "Uptime"

@@ -1,8 +1,8 @@
 import json
 import uuid
-
 import asyncio
 import logging
+import hashlib
 
 from pathlib import Path
 from configparser import ConfigParser, NoSectionError, NoOptionError
@@ -21,8 +21,6 @@ from pyrogram.raw.functions.account.get_password import GetPassword
 from .. import __version__
 
 logger = logging.getLogger(__name__)
-
-
 
 BASE_DIR = Path(__file__).parent
 PAGE_DIR = BASE_DIR / "page"
@@ -68,6 +66,28 @@ class WebsocketServer:
             config.read(str(self._config_path))
         return config
 
+    # --- Password protection methods ---
+
+    def get_password_hash(self):
+        if self._config.has_option("auth", "password_hash"):
+            return self._config.get("auth", "password_hash")
+        return None
+
+    def set_password_hash(self, password: str):
+        if not self._config.has_section("auth"):
+            self._config.add_section("auth")
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        print(f"[DEBUG] Set password hash: {password_hash}")  # Для отладки
+        self._config.set("auth", "password_hash", password_hash)
+        with open(self._config_path, "w") as file:
+            self._config.write(file)
+        return password_hash
+
+    def check_password(self, password: str):
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        print(f"[DEBUG] Check password hash: {password_hash}, expected: {self.get_password_hash()}")  # Для отладки
+        return password_hash == self.get_password_hash()
+
     async def index(self, _) -> web.Response:
         return web.FileResponse(path=PAGE_DIR / "index.html")
 
@@ -92,6 +112,38 @@ class WebsocketServer:
             "session_token", session_token, httponly=True, secure=False, expires=30 * 60
         )
         await ws.prepare(request)
+
+        # --- Password protection handshake ---
+        password_hash = self.get_password_hash()
+        if password_hash:
+            await ws.send_json({"type": "password_required"})
+            try:
+                msg = await ws.receive_json(timeout=60)
+            except Exception:
+                await ws.close(code=4001, message=b"Password required")
+                return ws
+
+            if msg.get("type") != "password" or not self.check_password(msg.get("content", "")):
+                await ws.send_json({"type": "error", "content": "Wrong password"})
+                await ws.close(code=4002, message=b"Wrong password")
+                return ws
+        else:
+            # If no password set, ask to set it
+            await ws.send_json({"type": "set_password"})
+            try:
+                msg = await ws.receive_json(timeout=60)
+            except Exception:
+                await ws.close(code=4003, message=b"Password not set")
+                return ws
+
+            if msg.get("type") != "set_password" or not msg.get("content"):
+                await ws.send_json({"type": "error", "content": "Password not set"})
+                await ws.close(code=4004, message=b"Password not set")
+                return ws
+
+            self.set_password_hash(msg.get("content"))
+            await ws.send_json({"type": "message", "content": "Password set successfully"})
+            await ws.send_json({"type": "password_set"})
 
         if self.session_token == session_token and self.last_request:
             await ws.send_json(self.last_request)
@@ -132,6 +184,13 @@ class WebsocketServer:
             logger.exception("Error during message handling: %s", exc)
         finally:
             self.connection = None
+            if self.qr_wait and not self.qr_wait.done():
+                self.qr_wait.cancel()
+                try:
+                    await self.qr_wait
+                except Exception:
+                    pass
+            self.qr_wait = None
 
         return ws
 
@@ -278,23 +337,27 @@ class WebsocketServer:
         await self.send_request({"type": "qr_login", "content": self.qr_login.url})
 
     async def wait_qr_login(self):
-        while True:
-            try:
-                logger.info("Waiting for QR login...")
-                state = await self.qr_login.wait(10)
-                if isinstance(state, User):
-                    await self.stop()
+        try:
+            while True:
+                try:
+                    logger.info("Waiting for QR login...")
+                    state = await self.qr_login.wait(10)
+                    if isinstance(state, User):
+                        await self.stop()
+                        break
+                except errors.SessionPasswordNeeded:
+                    await self.handle_password_needed()
                     break
-            except errors.SessionPasswordNeeded:
-                await self.handle_password_needed()
-                break
-            except (asyncio.TimeoutError, pyrogram.errors.AuthTokenExpired):
-                logger.info("QR expired or timeout, recreating QR code...")
-                await self.qr_login.recreate()
-                await self.send_request(
-                    {"type": "qr_login", "content": self.qr_login.url}
-                )
-            await asyncio.sleep(1)
+                except (asyncio.TimeoutError, pyrogram.errors.AuthTokenExpired):
+                    logger.info("QR expired or timeout, recreating QR code...")
+                    await self.qr_login.recreate()
+                    await self.send_request(
+                        {"type": "qr_login", "content": self.qr_login.url}
+                    )
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            logger.info("QR wait task cancelled")
+            return
 
     async def stop(self):
         try:

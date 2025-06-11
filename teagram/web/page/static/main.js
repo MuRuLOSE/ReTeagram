@@ -25,8 +25,13 @@ $(document).ready(function() {
       "two_factor_title": "Two-Factor Authentication",
       "password_placeholder": "Password",
       "submit_password": "Submit Password",
-      "password_hint": "Hint: %s", // 35833/42
-      "final_message": "Finished! Return to Telegram and wait for inline bot."
+      "password_hint": "Hint: %s",
+      "final_message": "Finished! Return to Telegram and wait for inline bot.",
+      "set_password_title": "Set Password",
+      "set_password_placeholder": "Enter new password",
+      "set_password_button": "Set Password",
+      "wrong_password": "Wrong password, please try again.",
+      "password_required": "Password required to continue."
     },
     ru: {
       "welcome_message": "Добро пожаловать в Teagram-v2. Чтобы начать, нажмите кнопку ниже и следуйте инструкциям.",
@@ -53,8 +58,13 @@ $(document).ready(function() {
       "two_factor_title": "Двухфакторная аутентификация",
       "password_placeholder": "Пароль",
       "submit_password": "Подтвердить",
-      "password_hint": "Подсказка: %s", // 35833/42
-      "final_message": "Готово! Вернитесь в Telegram и ждите inline-бота."
+      "password_hint": "Подсказка: %s",
+      "final_message": "Готово! Вернитесь в Telegram и ждите inline-бота.",
+      "set_password_title": "Установите пароль",
+      "set_password_placeholder": "Введите новый пароль",
+      "set_password_button": "Установить пароль",
+      "wrong_password": "Неверный пароль, попробуйте снова.",
+      "password_required": "Для продолжения требуется пароль."
     }
   };
 
@@ -79,14 +89,14 @@ $(document).ready(function() {
         }
       }
     });
-    
+
     $('[data-placeholder-key]').each(function() {
       var key = $(this).data('placeholder-key');
       if (translations[currentLanguage][key]) {
         $(this).attr('placeholder', translations[currentLanguage][key]);
       }
     });
-    
+
     $('[data-button-key]').each(function() {
       var key = $(this).data('button-key');
       if (translations[currentLanguage][key]) {
@@ -109,6 +119,58 @@ $(document).ready(function() {
     showWindow("phone-section");
   }
 
+  // --- Password UI ---
+  function showPasswordWindow(type) {
+    // type: "set" or "enter"
+    $("#password-section, #set-password-section").remove(); // Remove if exists
+
+    var html = "";
+    if (type === "set") {
+      html = `
+        <div id="set-password-section" class="window active">
+          <h2>${translations[currentLanguage]["set_password_title"]}</h2>
+          <input type="password" id="set_password_input" class="form-control" placeholder="${translations[currentLanguage]["set_password_placeholder"]}">
+          <button id="set-password-btn" class="btn btn-primary">${translations[currentLanguage]["set_password_button"]}</button>
+          <div id="set-password-error" style="color:red;display:none;margin-top:10px;"></div>
+        </div>
+      `;
+    } else {
+      html = `
+        <div id="password-section" class="window active">
+          <h2>${translations[currentLanguage]["password_required"]}</h2>
+          <input type="password" id="enter_password_input" class="form-control" placeholder="${translations[currentLanguage]["password_placeholder"]}">
+          <button id="enter-password-btn" class="btn btn-primary">${translations[currentLanguage]["submit_password"]}</button>
+          <div id="enter-password-error" style="color:red;display:none;margin-top:10px;"></div>
+        </div>
+      `;
+    }
+    $("#login-container").children(".window.active").removeClass("active").hide();
+    $("#login-container").append(html);
+
+    if (type === "set") {
+      $("#set-password-btn").off("click").on("click", function() {
+        var pwd = $("#set_password_input").val();
+        if (!pwd) {
+          $("#set-password-error").text(translations[currentLanguage]["password_required"]).show();
+          return;
+        }
+        ws.send(JSON.stringify({type: "set_password", content: pwd}));
+        $("#set-password-btn").prop("disabled", true);
+      });
+    } else {
+      $(document).off("click", "#enter-password-btn");
+      $(document).on("click", "#enter-password-btn", function() {
+        var pwd = $("#enter_password_input").val();
+        if (!pwd) {
+          $("#enter-password-error").text(translations[currentLanguage]["password_required"]).show();
+          return;
+        }
+        ws.send(JSON.stringify({type: "password", content: pwd}));
+        $("#enter-password-btn").prop("disabled", true);
+      });
+    }
+  }
+
   function processMessage(msg) {
     const $message = $("#message");
     function updateMessage(text) {
@@ -117,16 +179,29 @@ $(document).ready(function() {
       });
     }
     switch (msg.type) {
+      case "set_password":
+        showPasswordWindow("set");
+        break;
+      case "password_required":
+        showPasswordWindow("enter");
+        break;
+      case "wrong_password":
+        $("#enter-password-error").text(translations[currentLanguage]["wrong_password"]).show();
+        $("#enter-password-btn").prop("disabled", false);
+        break;
+      case "password_set":
+        $("#set-password-section").fadeOut(200, function() {
+          $(this).remove();
+          showWindow("tokens-section");
+        });
+        break;
       case "enter_tokens":
         showWindow("tokens-section");
         updateMessage("");
         break;
       case "qr_login":
         if (phoneAuthActive) break;
-        if (!$("#qr-section").hasClass("active") && !$("#password-section").hasClass("active")) {
-          showWindow("qr-section");
-        } else break;
-
+        showWindow("qr-section");
         $("#qr-container").empty();
         const qrCode = new QRCodeStyling({
           width: 205,
@@ -146,22 +221,19 @@ $(document).ready(function() {
             crossOrigin: "anonymous",
           },
         });
-        
         qrCode.append(document.getElementById("qr-container"));
-
         updateMessage("");
         break;
       case "session_password_needed":
-        const password_hint = msg.hint;
-        if (password_hint) {
-          const formattedHint = translations[currentLanguage]["password_hint"].replace('%s', password_hint);
-          $("#password-hint").text(formattedHint).fadeIn("slow");
-        }
-        
-        showWindow("password-section");
+        showTelegram2FAWindow(msg.hint);
         break;
       case "message":
         updateMessage(msg.content);
+        if (msg.content && msg.content.toLowerCase().includes("cloud authentication successful")) {
+          setTimeout(function() {
+            ws.close(1000);
+          }, 1000);
+        }
         break;
       case "error":
         updateMessage(msg.content);
@@ -185,8 +257,8 @@ $(document).ready(function() {
     });
   });
 
-  let wsUrl = window.location.protocol === "https:" ? 
-    "wss://" + window.location.host + "/ws" : 
+  let wsUrl = window.location.protocol === "https:" ?
+    "wss://" + window.location.host + "/ws" :
     "ws://" + window.location.host + "/ws";
   const ws = new WebSocket(wsUrl);
 
@@ -215,17 +287,22 @@ $(document).ready(function() {
   };
 
   function showWindow(windowId) {
+    var $target = $("#" + windowId);
+    if (!$target.length) {
+      console.warn("No such window:", windowId);
+      return;
+    }
     var $currentWindow = $(".window.active");
     if ($currentWindow.length) {
       $currentWindow.fadeOut(300, function() {
         $currentWindow.removeClass("active");
-        $("#" + windowId).fadeIn(300, function() {
-          $(this).addClass("active");
+        $target.fadeIn(300, function() {
+          $target.addClass("active");
         });
       });
     } else {
-      $("#" + windowId).fadeIn(300, function() {
-        $(this).addClass("active");
+      $target.fadeIn(300, function() {
+        $target.addClass("active");
       });
     }
   }
@@ -292,7 +369,7 @@ $(document).ready(function() {
     currentLanguage = (currentLanguage === "en") ? "ru" : "en";
     translatePage(true);
   });
-  
+
   $("#qr-container").on("click", function() {
     ws.send(JSON.stringify({ type: "authorize_qr" }));
   });
@@ -303,7 +380,7 @@ $(document).ready(function() {
     "Salue!", "Sveiki!", "Dobrý den!", "Tere!", "Xin chào!", "Selam!", "Mabuhay!", "Sawadee!",
     "Jambo!", "Habari!", "Bula!", "Kamusta!", "Sawatdee!", "God dag!", "Moien!", "Halo!", "Cześć!"
   ];
-  
+
   function typeEffect(element, text, callback) {
     var index = 0;
     var interval = setInterval(function() {
@@ -328,7 +405,7 @@ $(document).ready(function() {
       }
     }, 50);
   }
-  
+
   function cycleGreetings(greetingsArr, index) {
     var element = document.querySelector('h1[data-key="welcome_title"]');
     if (!element) return;
@@ -342,8 +419,32 @@ $(document).ready(function() {
     });
   }
 
-  $("#welcome-section").fadeOut(500, function() {
-    cycleGreetings(greetings, 0);
-    $("#welcome-section").fadeIn(1000);
-  });
+  cycleGreetings(greetings, 0);
+
+  function showTelegram2FAWindow(hint) {
+    $("#telegram-2fa-section").remove();
+    var html = `
+      <div id="telegram-2fa-section" class="window active">
+        <h2>${translations[currentLanguage]["two_factor_title"]}</h2>
+        <input type="password" id="telegram_2fa_input" class="form-control" placeholder="${translations[currentLanguage]["password_placeholder"]}">
+        <div id="telegram-2fa-hint" style="margin:10px 0;color:#888;">${hint ? translations[currentLanguage]["password_hint"].replace('%s', hint) : ''}</div>
+        <button id="telegram-2fa-btn" class="btn btn-primary">${translations[currentLanguage]["submit_password"]}</button>
+        <div id="telegram-2fa-error" style="color:red;display:none;margin-top:10px;"></div>
+      </div>
+    `;
+    $("#login-container").children(".window.active").removeClass("active").hide();
+    $("#login-container").append(html);
+
+    $(document).off("click", "#telegram-2fa-btn");
+    $(document).on("click", "#telegram-2fa-btn", function() {
+      var pwd = $("#telegram_2fa_input").val();
+      if (!pwd) {
+        $("#telegram-2fa-error").text(translations[currentLanguage]["password_required"]).show();
+        return;
+      }
+      ws.send(JSON.stringify({type: "cloud_auth", password: pwd}));
+      $("#telegram-2fa-btn").prop("disabled", true);
+    });
+  }
+
 });

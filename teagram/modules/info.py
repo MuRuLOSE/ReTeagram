@@ -1,5 +1,5 @@
 from .. import loader, utils, __version__
-from aiogram.types import InputFile
+from aiogram.types.input_file import FSInputFile
 
 import psutil
 import time
@@ -77,7 +77,7 @@ class Info(loader.Module):
     @loader.message_handler(lambda _, message: "start" in message.text.lower())
     async def start_message_handler(self, message):
         await message.answer_photo(
-            photo=InputFile("assets/teagram_banner.png"),
+            photo=FSInputFile("assets/teagram_banner.png", "banner.png"),
             caption=self.get("hello_world").format(
                 self.database.get("teagram", "prefix", ["."])[0]
             ),
@@ -87,7 +87,7 @@ class Info(loader.Module):
                     [
                         {
                             "text": "💻 Github",
-                            "url": "https://github.com/itzlayz/teagram-v2",
+                            "url": "https://github.com/MuRuLOSE/ReTeagram",
                         }
                     ]
                 ]
