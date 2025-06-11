@@ -37,9 +37,16 @@ class Form:
 ) -> types.Message:
         form_id = random_id()
 
-        # Ensure _forms is initialized
+        # Ensure _forms and _context are initialized
         if not hasattr(self, "_forms"):
             self._forms = {}
+        if not hasattr(self, "_context"):
+            self._context = {}
+
+        form_id = random_id()
+
+        # Save the message separately in _context (won't be serialized)
+        self._context[form_id] = {"message": message}
 
         media = {
             k: v
@@ -56,10 +63,10 @@ class Form:
         self._forms[form_id] = {
             "type": FormType.FORM,
             "text": text,
-            # "message": message, dont serialize
             "reply_markup": reply_markup,
             "parse_mode": parse_mode,
             **media,
+            # no message here!
         }
 
         # Get bot username if not cached
