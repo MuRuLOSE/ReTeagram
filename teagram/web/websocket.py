@@ -12,6 +12,7 @@ from aiohttp import web, WSMsgType
 from ..client import CustomClient
 
 from pyrogram import errors
+import pyrogram
 from pyrogram.types import User
 
 from pyrogram.qrlogin import QRLogin
@@ -20,6 +21,8 @@ from pyrogram.raw.functions.account.get_password import GetPassword
 from .. import __version__
 
 logger = logging.getLogger(__name__)
+
+
 
 BASE_DIR = Path(__file__).parent
 PAGE_DIR = BASE_DIR / "page"
@@ -260,34 +263,38 @@ class WebsocketServer:
         if self.need_2fa:
             return
 
-        if not self.qr_login and not self.qr_wait:
-            self.qr_login = QRLogin(self.client)
-            self.qr_wait = asyncio.create_task(self.wait_qr_login())
+        # Cancel previous QR wait task if running
+        if self.qr_wait and not self.qr_wait.done():
+            self.qr_wait.cancel()
+            try:
+                await self.qr_wait
+            except Exception:
+                pass
 
-        try:
-            await self.qr_login.recreate()
-            await self.send_request({"type": "qr_login", "content": self.qr_login.url})
-        except errors.SessionPasswordNeeded:
-            await self.handle_password_needed()
+        self.qr_login = QRLogin(self.client)
+        await self.qr_login.recreate()
+        self.qr_wait = asyncio.create_task(self.wait_qr_login())
+
+        await self.send_request({"type": "qr_login", "content": self.qr_login.url})
 
     async def wait_qr_login(self):
-        interval = 5
         while True:
             try:
+                logger.info("Waiting for QR login...")
                 state = await self.qr_login.wait(10)
                 if isinstance(state, User):
                     await self.stop()
                     break
-            except asyncio.TimeoutError:
+            except errors.SessionPasswordNeeded:
+                await self.handle_password_needed()
+                break
+            except (asyncio.TimeoutError, pyrogram.errors.AuthTokenExpired):
+                logger.info("QR expired or timeout, recreating QR code...")
                 await self.qr_login.recreate()
-
                 await self.send_request(
                     {"type": "qr_login", "content": self.qr_login.url}
                 )
-            except errors.SessionPasswordNeeded:
-                await self.handle_password_needed()
-
-            await asyncio.sleep(interval)
+            await asyncio.sleep(1)
 
     async def stop(self):
         try:
