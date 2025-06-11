@@ -45,6 +45,9 @@ async def get_cpu() -> str:
         return f"{cpu:0.2f}%"
     except Exception as error:
         return str(error)
+        return round(mem, 2)
+    except Exception:
+        return "??? "
 
 
 class Info(loader.Module):
