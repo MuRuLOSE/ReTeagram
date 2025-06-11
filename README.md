@@ -8,6 +8,9 @@
     Teagram-v2 based on performance and <a href="https://github.com/KurimuzonAkuma/pyrogram">last telegram layers</a>
 </p>
 
+<h1>What is Re:Teagram?</h1>
+Re:Teagram is fork of original Teagram v2 by itzlayz (thanks), with some features
+
 <h1>💻 Install</h1>
 
 > ⚠ You need api_id and api_hash to run. You can get them at <a href="https://my.telegram.org">my.telegram.org</a> <br>
@@ -16,7 +19,7 @@
 
 ```bash
 sudo apt update && sudo apt upgrade -y && sudo apt install -y openssl git python3 python3-pip
-git clone https://github.com/itzlayz/teagram-v2 && cd teagram-v2 && pip install -r requirements.txt && python3 -m teagram
+git clone https://github.com/MuRuLOSE/ReTeagram.git && cd ReTeagram && pip install -r requirements.txt && python3 -m teagram
 ```
 
 <h1>✨ Advantages:</h1>
