@@ -77,7 +77,6 @@ class WebsocketServer:
         if not self._config.has_section("auth"):
             self._config.add_section("auth")
         password_hash = hashlib.sha256(password.encode()).hexdigest()
-        print(f"[DEBUG] Set password hash: {password_hash}")  # Для отладки
         self._config.set("auth", "password_hash", password_hash)
         with open(self._config_path, "w") as file:
             self._config.write(file)
@@ -85,7 +84,7 @@ class WebsocketServer:
 
     def check_password(self, password: str):
         password_hash = hashlib.sha256(password.encode()).hexdigest()
-        print(f"[DEBUG] Check password hash: {password_hash}, expected: {self.get_password_hash()}")  # Для отладки
+
         return password_hash == self.get_password_hash()
 
     async def index(self, _) -> web.Response:
