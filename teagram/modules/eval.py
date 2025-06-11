@@ -1,6 +1,8 @@
 from .. import loader, utils
 import ast
 
+from pyrogram.errors.exceptions.bad_request_400 import MessageTooLong
+from pyrogram.types import Message
 
 def insert_returns(body):
     if isinstance(body[-1], ast.Expr):
@@ -38,7 +40,7 @@ class Evaluator(loader.Module):
     strings = {"name": "Eval"}
 
     @loader.command(alias="e")
-    async def eval(self, message, args):
+    async def eval(self, message: Message, args):
         env = {
             "self": self,
             "client": self.client,
@@ -47,6 +49,8 @@ class Evaluator(loader.Module):
             "msg": message,
             "m": message,
             "args": args,
+            "r" : message.reply_to_message,
+            "reply": message.reply_to_message,
         }
 
         result = None
@@ -57,4 +61,10 @@ class Evaluator(loader.Module):
         except Exception as error:
             result = str(error)
 
-        await utils.answer(message, self.get("result").format(args, result))
+        try:
+            await utils.answer(message, self.get("result").format(args, result))
+        except MessageTooLong:
+            result = str(result)
+            if len(result) > 4096:
+                result = result[:4000] + "\n..."
+            await utils.answer(message, self.get("result").format(args, result))
