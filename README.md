@@ -1,11 +1,11 @@
-[![Teagram](https://github.com/MuRuLOSE/teagram-assets/raw/main/teagram_banner2v1.png)](https://t.me/UBteagram)
+[![Teagram](https://github.com/MuRuLOSE/teagram-assets/raw/main/teagram_banner2v1.png)](https://t.me/+9BK5VH-n5T0zYzQ6)
 
 <p align="center">
-    <img src="https://img.shields.io/github/languages/code-size/itzlayz/teagram-v2?style=for-the-badge">
+    <img src="https://img.shields.io/github/languages/code-size/MuRuLOSE/ReTeagram?style=for-the-badge">
 </p>
 
 <p align="center">
-    Teagram-v2 based on performance and <a href="https://github.com/KurimuzonAkuma/pyrogram">last telegram layers</a>
+    Re:Teagram based on performance and <a href="https://github.com/KurimuzonAkuma/pyrogram">last telegram layers</a>
 </p>
 
 <h1>What is Re:Teagram?</h1>
@@ -24,6 +24,17 @@ git clone https://github.com/MuRuLOSE/ReTeagram.git && cd ReTeagram && pip insta
 
 <h1>✨ Advantages:</h1>
 <ul>
-    <li>User-friendly authorization</b>
+    <li>Simple and intuitive login (in console and web)</li>
+    <li>QR code login support</li>
+    <li>Modular architecture</li>
+    <li>Module/plugin support <i>(enables unlimited features)</i></li>
+    <li>Cross-platform (Linux / Android* / Windows** / Mac*)</li>
+    <li>Open source</li>
+    <li>Multi-language support</li>
     <li>High performance</li>
+    <li>Latest MTProto and Bot API layers <i>(unlocks limitless possibilities)</i></li>
+    <li>...and much more!</li>
 </ul>
+
+<i>* - Not tested</i><br>
+<i>** - Not full support</i>
