@@ -27,18 +27,18 @@ class Form:
         self._loader = loader
 
     async def answer(
-        self,
-        text: str,
-        message: types.Message,
-        reply_markup: typing.List[typing.Dict[str, typing.Any]] = None,
-        *,
-        photo: typing.Optional[FileLike] = None,
-        gif: typing.Optional[FileLike] = None,
-        video: typing.Optional[FileLike] = None,
-        file: typing.Optional[FileLike] = None,
-        audio: typing.Optional[FileLike] = None,
-        parse_mode: typing.Optional[ParseMode] = ParseMode.HTML,
-    ) -> PyroMessage:
+    self,
+    text: str,
+    message: typing.Union[types.Message, PyroMessage],
+    reply_markup: typing.List[typing.Dict[str, typing.Any]] = None,
+    *,
+    photo: typing.Optional[FileLike] = None,
+    gif: typing.Optional[FileLike] = None,
+    video: typing.Optional[FileLike] = None,
+    file: typing.Optional[FileLike] = None,
+    audio: typing.Optional[FileLike] = None,
+    parse_mode: typing.Optional[ParseMode] = ParseMode.HTML,
+) -> PyroMessage:
         form_id = random_id()
 
         if not hasattr(self, "_forms"):
@@ -46,7 +46,16 @@ class Form:
         if not hasattr(self, "_context"):
             self._context = {}
 
-        self._context[form_id] = {"message": message}
+        # Store only necessary message attributes
+        self._context[form_id] = {
+            "chat_id": message.chat.id,
+            "message_id": message.id if isinstance(message, PyroMessage) else message.message_id,
+            "reply_to_message_id": (
+                message.reply_to_message_id
+                if isinstance(message, PyroMessage)
+                else message.reply_to_message.message_id if message.reply_to_message else None
+            ),
+        }
 
         media = {
             k: v
@@ -78,18 +87,12 @@ class Form:
             bot_username, form_id
         )
 
-        reply_to_message_id = None
-        if isinstance(message, PyroMessage):
-            reply_to_message_id = message.reply_to_message_id
-        elif isinstance(message, types.Message) and message.reply_to_message:
-            reply_to_message_id = message.reply_to_message.message_id
-
         if bot_results and bot_results.results:
             return await self._loader.client.send_inline_bot_result(
-                message.chat.id,
+                self._context[form_id]["chat_id"],
                 bot_results.query_id,
                 bot_results.results[0].id,
-                reply_to_message_id=reply_to_message_id,
+                reply_to_message_id=self._context[form_id]["reply_to_message_id"],
             )
         else:
             raise ValueError("No inline results returned by bot.")
