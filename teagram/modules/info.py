@@ -57,7 +57,7 @@ class Info(loader.Module):
         await utils.answer(
             message,
             (
-                "<b>☕️ Teagram v2</b>\n\n"
+                "<b>☕️ Re:Teagram</b>\n\n"
                 f"<b>🧠 {self.get('ram')}:</b> <code>{(await get_ram())}</code>\n"
                 f"<b>⚡ {self.get('cpu')}:</b> <code>{(await get_cpu())}</code>\n\n"
                 f"<b>⏳ {self.get('uptime')}:</b> <code>{utils.get_uptime()}</code>\n"
