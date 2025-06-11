@@ -9,8 +9,7 @@ from .event_manager import EventManager
 from ..types import ABCLoader
 
 from aiogram import Bot, Dispatcher
-from aiogram.utils.exceptions import ValidationError, Unauthorized
-
+from aiogram.exceptions import TelegramUnauthorizedError, TelegramBadRequest
 
 class InlineDispatcher(TokenManager, EventManager):
     def __init__(self, loader: ABCLoader):
@@ -42,20 +41,20 @@ class InlineDispatcher(TokenManager, EventManager):
 
         try:
             self.bot = Bot(self.token)
-            self.dispatcher = Dispatcher(self.bot)
-        except ValidationError:
+            self.dispatcher = Dispatcher()
+        except TelegramBadRequest:
             return await self.restart()
 
         try:
             await self.bot.delete_webhook(drop_pending_updates=True)
 
-            self.dispatcher.register_message_handler(self._message_handler)
-            self.dispatcher.register_callback_query_handler(self._callback_handler)
-            self.dispatcher.register_inline_handler(self._inline_handler)
-            self.dispatcher.register_chosen_inline_handler(self._chosen_inline_handler)
+            self.dispatcher.message.register(self._message_handler)
+            self.dispatcher.callback_query.register(self._callback_handler)
+            self.dispatcher.inline_query.register(self._inline_handler)
+            self.dispatcher.chosen_inline_result.register(self._chosen_inline_handler)
 
-            asyncio.ensure_future(self.dispatcher.start_polling())
-        except Unauthorized:
+            asyncio.create_task(self.dispatcher.start_polling(self.bot))
+        except TelegramUnauthorizedError:
             return await self.restart()
 
         return self.bot

@@ -1,4 +1,4 @@
-from aiogram.types import Message, ChosenInlineResult, InlineQuery, CallbackQuery
+from aiogram import types as aio_types
 
 from ..types import ABCLoader, Module
 from .types import Form
@@ -7,7 +7,6 @@ from types import FunctionType
 
 import typing
 import inspect
-
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,13 +14,14 @@ logger = logging.getLogger(__name__)
 
 class EventManager(Form):
     def __init__(self, loader: ABCLoader):
+        super().__init__(loader)
         self._loader = loader
 
     async def _check_filters(
         self,
         func: FunctionType,
         module: Module,
-        event: typing.Union[Message, InlineQuery, CallbackQuery],
+        event: typing.Union[aio_types.Message, aio_types.InlineQuery, aio_types.CallbackQuery],
     ) -> bool:
         custom_filters = getattr(func, "_filters", None)
         if custom_filters and module:
@@ -36,11 +36,11 @@ class EventManager(Form):
 
         return True
 
-    async def _message_handler(self, message: Message):
-        logger.debug("Handling message from %s", message.from_user.as_json())
+    async def _message_handler(self, message: aio_types.Message):
+        logger.debug("Handling message from %s", message.from_user.model_dump_json())
 
         for func in self._loader.message_handlers.copy():
-            if not await self._check_filters(func, func.__self__, message):
+            if not await self._check_filters(func, getattr(func, "__self__", None), message):
                 continue
 
             try:
@@ -50,14 +50,14 @@ class EventManager(Form):
 
         return message
 
-    async def _callback_handler(self, callback_query: CallbackQuery):
+    async def _callback_handler(self, callback_query: aio_types.CallbackQuery):
         """Handles buttons' callback"""
         callback_data = callback_query.data
 
         logger.debug(
             "Handling %s from %s",
             callback_data,
-            callback_query.from_user.as_json(),
+            callback_query.from_user.model_dump_json(),
         )
 
         if callback_data in self._forms:
@@ -74,7 +74,7 @@ class EventManager(Form):
 
         handler = self._loader.callback_handlers.get(callback_data)
         if handler:
-            if await self._check_filters(handler, handler.__self__, callback_query):
+            if await self._check_filters(handler, getattr(handler, "__self__", None), callback_query):
                 try:
                     await handler(callback_query)
                 except Exception:
@@ -83,7 +83,7 @@ class EventManager(Form):
                 return callback_query
 
         for func in self._loader.callback_handlers.copy().values():
-            if not await self._check_filters(func, func.__self__, callback_query):
+            if not await self._check_filters(func, getattr(func, "__self__", None), callback_query):
                 continue
 
             try:
@@ -93,7 +93,7 @@ class EventManager(Form):
 
         return callback_query
 
-    async def _inline_handler(self, inline_query: InlineQuery):
+    async def _inline_handler(self, inline_query: aio_types.InlineQuery):
         """
         Handles inline queries like:
         `@pic tea`, `@teagram_v2 hidden_message secret`
@@ -101,7 +101,7 @@ class EventManager(Form):
         query = inline_query.query
         cmd, args = query.split(maxsplit=1) if " " in query else (query, "")
 
-        logger.debug("Handling %s from %s", query, inline_query.from_user.as_json())
+        logger.debug("Handling %s from %s", query, inline_query.from_user.model_dump_json())
         logger.debug("Command - `%s`, arguments - `%s`", cmd, args)
 
         form = self._forms.get(cmd)
@@ -113,7 +113,7 @@ class EventManager(Form):
 
         func = self._loader.inline_handlers.get(cmd)
         if func:
-            if await self._check_filters(func, func.__self__, inline_query):
+            if await self._check_filters(func, getattr(func, "__self__", None), inline_query):
                 try:
                     result = await func(inline_query)
                     await self._handle_inline_result(inline_query, result)
@@ -124,14 +124,14 @@ class EventManager(Form):
 
         return query
 
-    async def _chosen_inline_handler(self, chosen_inline_result: ChosenInlineResult):
+    async def _chosen_inline_handler(self, chosen_inline_result: aio_types.ChosenInlineResult):
         """Handles update when user clicking on inline query result"""
         chosen_query = chosen_inline_result.query
 
         logger.debug(
             "Handling chosen inline result for query: %s from user: %s",
             chosen_query,
-            chosen_inline_result.from_user.as_json(),
+            chosen_inline_result.from_user.model_dump_json(),
         )
 
-        # TODO: handle them fr
+        # TODO: handle them from your logic

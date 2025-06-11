@@ -1,6 +1,6 @@
 import typing
 from enum import Enum
-from aiogram import types
+from aiogram import types as aio_types
 from aiogram.types import (
     InlineQueryResultArticle,
     InlineQueryResultPhoto,
@@ -27,18 +27,18 @@ class Form:
         self._loader = loader
 
     async def answer(
-    self,
-    text: str,
-    message: typing.Union[types.Message, PyroMessage],
-    reply_markup: typing.List[typing.Dict[str, typing.Any]] = None,
-    *,
-    photo: typing.Optional[FileLike] = None,
-    gif: typing.Optional[FileLike] = None,
-    video: typing.Optional[FileLike] = None,
-    file: typing.Optional[FileLike] = None,
-    audio: typing.Optional[FileLike] = None,
-    parse_mode: typing.Optional[ParseMode] = ParseMode.HTML,
-) -> PyroMessage:
+        self,
+        text: str,
+        message: typing.Union[aio_types.Message, PyroMessage],
+        reply_markup: typing.List[typing.Dict[str, typing.Any]] = None,
+        *,
+        photo: typing.Optional[FileLike] = None,
+        gif: typing.Optional[FileLike] = None,
+        video: typing.Optional[FileLike] = None,
+        file: typing.Optional[FileLike] = None,
+        audio: typing.Optional[FileLike] = None,
+        parse_mode: typing.Optional[ParseMode] = ParseMode.HTML,
+    ) -> PyroMessage:
         form_id = random_id()
 
         if not hasattr(self, "_forms"):
@@ -49,11 +49,11 @@ class Form:
         # Store only necessary message attributes
         self._context[form_id] = {
             "chat_id": message.chat.id,
-            "message_id": message.id if isinstance(message, PyroMessage) else message.message_id,
+            "message_id": getattr(message, "message_id", getattr(message, "id", None)),
             "reply_to_message_id": (
-                message.reply_to_message_id
+                getattr(message, "reply_to_message_id", None)
                 if isinstance(message, PyroMessage)
-                else message.reply_to_message.message_id if message.reply_to_message else None
+                else getattr(getattr(message, "reply_to_message", None), "message_id", None)
             ),
         }
 
@@ -97,7 +97,7 @@ class Form:
         else:
             raise ValueError("No inline results returned by bot.")
 
-    async def _form_inline_handler(self, inline_query: types.InlineQuery, form: typing.Dict):
+    async def _form_inline_handler(self, inline_query: aio_types.InlineQuery, form: typing.Dict):
         normalized_markup = self._normalize_reply_markup(form.get("reply_markup"))
         base_text = form.get("text", "")
         parse_mode = "html"
@@ -107,7 +107,7 @@ class Form:
             result = InlineQueryResultPhoto(
                 id=random_id(),
                 photo_url=form["photo"],
-                thumb_url=form.get("thumb_url", form["photo"]),
+                thumbnail_url=form.get("thumb_url", form["photo"]),
                 caption=base_text,
                 parse_mode=parse_mode,
                 reply_markup=normalized_markup,
@@ -117,7 +117,7 @@ class Form:
             result = InlineQueryResultGif(
                 id=random_id(),
                 gif_url=form["gif"],
-                thumb_url=form.get("thumb_url", form["gif"]),
+                thumbnail_url=form.get("thumb_url", form["gif"]),
                 caption=base_text,
                 parse_mode=parse_mode,
                 reply_markup=normalized_markup,
@@ -128,7 +128,7 @@ class Form:
                 id=random_id(),
                 video_url=form["video"],
                 mime_type="video/mp4",
-                thumb_url=form.get("thumb_url", form["video"]),
+                thumbnail_url=form.get("thumb_url", form["video"]),
                 title="Video",
                 caption=base_text,
                 parse_mode=parse_mode,
@@ -166,9 +166,9 @@ class Form:
                 reply_markup=normalized_markup
             )
 
-        await inline_query.answer([result], cache_time=30)
+        await inline_query.answer(results=[result], cache_time=30)
 
-    async def _handle_inline_result(self, inline_query: types.InlineQuery, func_results: typing.List[typing.Dict]):
+    async def _handle_inline_result(self, inline_query: aio_types.InlineQuery, func_results: typing.List[typing.Dict]):
         results = []
         for r in func_results:
             msg_text = r.get("text") or r.get("message", "")
@@ -185,7 +185,7 @@ class Form:
                     reply_markup=self._normalize_reply_markup(r.get("reply_markup"))
                 )
             )
-        await inline_query.answer(results, cache_time=30)
+        await inline_query.answer(results=results, cache_time=30)
 
     def _normalize_reply_markup(self, reply_markup):
         if (

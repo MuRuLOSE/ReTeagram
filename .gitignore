@@ -14,3 +14,5 @@ database.json
 *.log
 
 custom_modules
+.*
+.venv
