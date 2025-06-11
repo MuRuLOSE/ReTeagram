@@ -23,19 +23,23 @@ class Form:
 
     # glitched don't use it
     async def answer(
-        self,
-        text: str,
-        message: types.Message,
-        reply_markup: typing.List[typing.Dict[str, typing.Any]] = None,
-        *,
-        photo: typing.Optional[FileLike] = None,
-        gif: typing.Optional[FileLike] = None,
-        video: typing.Optional[FileLike] = None,
-        file: typing.Optional[FileLike] = None,
-        audio: typing.Optional[FileLike] = None,
-        parse_mode: typing.Optional[ParseMode] = ParseMode.HTML,
-    ) -> types.Message:
+    self,
+    text: str,
+    message: types.Message,
+    reply_markup: typing.List[typing.Dict[str, typing.Any]] = None,
+    *,
+    photo: typing.Optional[FileLike] = None,
+    gif: typing.Optional[FileLike] = None,
+    video: typing.Optional[FileLike] = None,
+    file: typing.Optional[FileLike] = None,
+    audio: typing.Optional[FileLike] = None,
+    parse_mode: typing.Optional[ParseMode] = ParseMode.HTML,
+) -> types.Message:
         form_id = random_id()
+
+        # Ensure _forms is initialized
+        if not hasattr(self, "_forms"):
+            self._forms = {}
 
         media = {
             k: v
@@ -58,30 +62,40 @@ class Form:
             **media,
         }
 
+        # Get bot username if not cached
         bot_username = getattr(self, "bot_username", None)
         if not bot_username:
             me = await self.bot.get_me()
             bot_username = me.username
-
             self.bot_username = bot_username
 
-        bot_results = await self._loader.client.get_inline_bot_results(
-            bot_username, form_id
-        )
+        try:
+            bot_results = await self._loader.client.get_inline_bot_results(
+                bot_username, form_id
+            )
+        except Exception as e:
+            raise RuntimeError(f"Failed to fetch inline bot results: {e}")
 
+        # Determine reply_to_message_id safely
+        reply_to_message_id = None
         if isinstance(message, PyroMessage):
             reply_to_message_id = message.reply_to_message_id
-
-        if isinstance(message, types.Message):
+        elif isinstance(message, types.Message) and message.reply_to_message:
             reply_to_message_id = message.reply_to_message.message_id
 
+        # Send result if available
         if bot_results and bot_results.results:
-            return await self._loader.client.send_inline_bot_result(
-                message.chat.id,
-                bot_results.query_id,
-                bot_results.results[0].id,
-                reply_to_message_id=reply_to_message_id,
-            )
+            try:
+                return await self._loader.client.send_inline_bot_result(
+                    message.chat.id,
+                    bot_results.query_id,
+                    bot_results.results[0].id,
+                    reply_to_message_id=reply_to_message_id,
+                )
+            except Exception as e:
+                raise RuntimeError(f"Failed to send inline bot result: {e}")
+        else:
+            raise ValueError("No inline results returned by bot.")
 
     async def _form_inline_handler(
         self, inline_query: types.InlineQuery, form: typing.Dict
