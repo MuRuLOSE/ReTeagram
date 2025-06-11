@@ -178,7 +178,7 @@ class Authorization:
                 pass
 
     async def _web_authorize(self):
-        self.port = self.port or get_port()
+        self.port: int = self.port or get_port()
 
         web = WebCore(port=self.port, test_mode=self.client.test_mode)
 

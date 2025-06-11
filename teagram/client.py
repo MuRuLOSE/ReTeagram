@@ -31,7 +31,7 @@ class Conversation:
 
     async def __aexit__(
         self, exc_type: type, exc_value: Exception, exc_traceback: TracebackType
-    ) -> bool:
+    ) -> Union[None, bool]:
         if all([exc_type, exc_value, exc_traceback]):
             logging.exception(exc_value)
         else:
