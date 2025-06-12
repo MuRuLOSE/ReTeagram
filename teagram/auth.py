@@ -15,6 +15,7 @@ from pyrogram.raw.functions.account.get_password import GetPassword
 
 from .web import WebCore
 from .client import CustomClient
+from .utils import save_app_name
 
 from . import __version__
 
@@ -48,7 +49,7 @@ class Authorization:
             "../teagram_v2",
             api_id=api_id,
             api_hash=api_hash,
-            device_model="Windows 10",
+            device_model=save_app_name(),
             app_version=__version__,
             test_mode=test_mode,
         )

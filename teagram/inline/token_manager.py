@@ -1,7 +1,7 @@
 from ..client import CustomClient
 from ..types import ABCLoader
 
-from ..utils import rand
+from ..utils import rand, save_bot_name
 
 from pyrogram import errors
 from re import search
@@ -71,12 +71,10 @@ class TokenManager:
                 await asyncio.sleep(5)
                 return await self.create_bot()
 
-            await conversation.send_message(
-                f"Teagram userbot of {self.client.me.username[:30]}"
-            )
+            await conversation.send_message(save_bot_name())
             await conversation.get_response()
 
-            bot_username = f"@teagram_v2_{rand(5)}_bot"
+            bot_username = f"@reteagram_{rand(5)}_bot"
             await conversation.send_message(bot_username)
 
             await asyncio.sleep(0.5)
@@ -113,7 +111,7 @@ class TokenManager:
 
                     for row in getattr(message.reply_markup, "inline_keyboard", []):
                         for button in row:
-                            if button.text.startswith("@teagram_v2_"):
+                            if button.text.startswith("@reteagram"):
                                 bot_username = button.text
                                 break
 

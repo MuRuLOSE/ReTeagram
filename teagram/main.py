@@ -8,14 +8,33 @@ from pyrogram.methods.utilities.idle import idle
 import asyncio
 import logging
 import sys
+import colorlog
+
+use_colors = sys.stdout.isatty()
+
+handler = colorlog.StreamHandler()
+handler.setFormatter(colorlog.ColoredFormatter(
+    "%(log_color)s%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    log_colors={
+        'DEBUG':    'cyan',
+        'INFO':     'green',
+        'WARNING':  'yellow',
+        'ERROR':    'red',
+        'CRITICAL': 'bold_red',
+    },
+    reset=True,
+    secondary_log_colors={},
+    style='%'
+) if use_colors else logging.Formatter(
+    "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+))
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[handler]
 )
-
-logging.getLogger().setLevel(logging.INFO)
 
 LOGGERS = ["pyrogram", "aiogram", "aiohttp.access", "watchfiles.main"]
 for logger in LOGGERS:

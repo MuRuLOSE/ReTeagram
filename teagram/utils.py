@@ -18,6 +18,8 @@ from aiogram import types
 from enum import Enum
 from urllib.parse import urlparse
 
+from configparser import ConfigParser
+
 FileLike = typing.Optional[typing.Union[BytesIO, IOBase, bytes, str]]
 InlineLike = typing.Union[
     types.ChosenInlineResult, types.InlineQuery, types.CallbackQuery
@@ -133,3 +135,59 @@ def clear_console():
 
 
 rand = random_id
+
+JAPANESE_MOCK = [
+    "Kaze", "Yami", "Hikari", "Tenshi", "Yume", "Tsuki", "Hana", "Kumo", "Mizu",
+    "Tora", "Kage", "Sora", "Hoshi", "Kokoro", "Kami", "Ryu", "Yoru", "Taiyo",
+    "Sakura", "Akari", "Kitsune", "Yuki", "Raijin", "Inari", "Shiro", "Kuro",
+    "Midori", "Aoi", "Akai", "Shinju", "Kumo", "Kawa", "Umi", "Mori", "Yama",
+    "Hane", "Kumo", "Koi", "Hibiki", "Ren", "Haruka", "Kazumi", "Ayame", "Takara",
+    "Hinata", "Suzu", "Rin", "Natsu", "Fuyu", "Ame", "Kirin", "Sango", "Hotaru",
+    "Mochi", "Sora", "Kage", "Kumo", "Mizu", "Yoru", "Hana", "Tsuki", "Yume",
+    "Kokoro", "Ryu", "Kami", "Hoshi", "Kaze", "Yami", "Taiyo", "Tenshi", "Sakura"
+]
+
+def generate_app_name() -> str:
+    """Generate random Japanese-style app name"""
+    return "-".join(random.choices(JAPANESE_MOCK, k=3))
+
+def save_app_name():
+    """Save the generated app name to a config file"""
+    config = ConfigParser()
+    config_path = os.path.join(BASE_PATH, "config.ini")
+    if os.path.exists(config_path):
+        config.read(config_path)
+    if not config.has_section("teagram"):
+        config.add_section("teagram")
+    if not config.has_option("teagram", "app_name"):
+        config.set("teagram", "app_name", generate_app_name())
+        with open(config_path, "w") as f:
+            config.write(f)
+    return config.get("teagram", "app_name", fallback=generate_app_name())
+
+JAPANESE_FEMALE_NAMES = [
+    "Sakura", "Yuki", "Haruka", "Hinata", "Ayame", "Takara", "Akari", "Kazumi",
+    "Suzu", "Rin", "Natsu", "Fuyu", "Ame", "Hotaru", "Mochi", "Hana", "Kumiko",
+    "Mizuho", "Miyu", "Aoi", "Midori", "Shinju", "Ayaka", "Nanami", "Emi",
+    "Yume", "Kanon", "Sayuri", "Mio", "Rika", "Nozomi", "Kokoro", "Hibiki",
+    "Kayo", "Miyuki", "Rina", "Yuna", "Kana", "Miyako", "Chihiro", "Yui"
+]
+
+def generate_bot_name() -> str:
+    """Generate random Japanese-style app name"""
+    return random.choice(JAPANESE_FEMALE_NAMES) + "-chan"
+
+def save_bot_name() -> str:
+    """Save the generated bot name to a config file"""
+    config = ConfigParser()
+    config_path = os.path.join(BASE_PATH, "config.ini")
+    if os.path.exists(config_path):
+        config.read(config_path)
+    if not config.has_section("teagram"):
+        config.add_section("teagram")
+    if not config.has_option("teagram", "bot_name"):
+        config.set("teagram", "bot_name", generate_bot_name())
+        with open(config_path, "w") as f:
+            config.write(f)
+    return config.get("teagram", "bot_name", fallback=generate_bot_name())
+
