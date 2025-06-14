@@ -11,7 +11,7 @@ class Logs(loader.Module):
     # inline buttons
 
     @loader.command()
-    async def logs_cmd(self, message: Message):
+    async def logscmd(self, message: Message):
         """
         — Send log file filtered by level (default: INFO)
         Levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -45,7 +45,7 @@ class Logs(loader.Module):
             await message.reply(text, parse_mode="HTML")
 
     @loader.command()
-    async def clearlogs_cmd(self, message: Message):
+    async def clearlogscmd(self, message: Message):
         """
         — Clear the log file
         """
