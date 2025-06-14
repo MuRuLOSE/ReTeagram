@@ -94,5 +94,5 @@ class Main:
         loader = Loader(client, database, self.arguments)
         await loader.load()
 
-        await idle()
+
         logging.info("Shutdown...")
