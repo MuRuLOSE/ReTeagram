@@ -115,6 +115,7 @@ class Loader(ABCLoader):
             "info",
             "manager",
             "terminal",
+            "logs"
         ]
 
         self.commands = {}
