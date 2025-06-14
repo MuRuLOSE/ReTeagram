@@ -8,10 +8,12 @@ class Logs(loader.Module):
     strings = {"name": "Logs"}
 
     # translate
+    # inline buttons
 
+    @loader.command()
     async def logs_cmd(self, message: Message):
         """
-        .logs [level] — Send log file filtered by level (default: INFO)
+        — Send log file filtered by level (default: INFO)
         Levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
         """
         args = utils.get_args_raw(message).strip().upper()
@@ -42,9 +44,10 @@ class Logs(loader.Module):
         else:
             await message.reply(text, parse_mode="HTML")
 
+    @loader.command()
     async def clearlogs_cmd(self, message: Message):
         """
-        .clearlogs — Clear the log file
+        — Clear the log file
         """
         log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "teagram.log")
         try:
