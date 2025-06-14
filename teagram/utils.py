@@ -6,12 +6,14 @@ import logging
 
 import random
 import string
+from typing import List
 
 from io import BytesIO, IOBase
 from . import init_time
 
 from pyrogram.types import Message
 from pyrogram.enums.parse_mode import ParseMode
+from teagram.client import CustomClient
 
 from aiogram import types
 
@@ -24,6 +26,7 @@ FileLike = typing.Optional[typing.Union[BytesIO, IOBase, bytes, str]]
 InlineLike = typing.Union[
     types.ChosenInlineResult, types.InlineQuery, types.CallbackQuery
 ]
+
 
 BASE_PATH = os.path.normpath(
     os.path.join(os.path.abspath(os.path.dirname(os.path.abspath(__file__))), "..")
@@ -137,19 +140,84 @@ def clear_console():
 rand = random_id
 
 JAPANESE_MOCK = [
-    "Kaze", "Yami", "Hikari", "Tenshi", "Yume", "Tsuki", "Hana", "Kumo", "Mizu",
-    "Tora", "Kage", "Sora", "Hoshi", "Kokoro", "Kami", "Ryu", "Yoru", "Taiyo",
-    "Sakura", "Akari", "Kitsune", "Yuki", "Raijin", "Inari", "Shiro", "Kuro",
-    "Midori", "Aoi", "Akai", "Shinju", "Kumo", "Kawa", "Umi", "Mori", "Yama",
-    "Hane", "Kumo", "Koi", "Hibiki", "Ren", "Haruka", "Kazumi", "Ayame", "Takara",
-    "Hinata", "Suzu", "Rin", "Natsu", "Fuyu", "Ame", "Kirin", "Sango", "Hotaru",
-    "Mochi", "Sora", "Kage", "Kumo", "Mizu", "Yoru", "Hana", "Tsuki", "Yume",
-    "Kokoro", "Ryu", "Kami", "Hoshi", "Kaze", "Yami", "Taiyo", "Tenshi", "Sakura"
+    "Kaze",
+    "Yami",
+    "Hikari",
+    "Tenshi",
+    "Yume",
+    "Tsuki",
+    "Hana",
+    "Kumo",
+    "Mizu",
+    "Tora",
+    "Kage",
+    "Sora",
+    "Hoshi",
+    "Kokoro",
+    "Kami",
+    "Ryu",
+    "Yoru",
+    "Taiyo",
+    "Sakura",
+    "Akari",
+    "Kitsune",
+    "Yuki",
+    "Raijin",
+    "Inari",
+    "Shiro",
+    "Kuro",
+    "Midori",
+    "Aoi",
+    "Akai",
+    "Shinju",
+    "Kumo",
+    "Kawa",
+    "Umi",
+    "Mori",
+    "Yama",
+    "Hane",
+    "Kumo",
+    "Koi",
+    "Hibiki",
+    "Ren",
+    "Haruka",
+    "Kazumi",
+    "Ayame",
+    "Takara",
+    "Hinata",
+    "Suzu",
+    "Rin",
+    "Natsu",
+    "Fuyu",
+    "Ame",
+    "Kirin",
+    "Sango",
+    "Hotaru",
+    "Mochi",
+    "Sora",
+    "Kage",
+    "Kumo",
+    "Mizu",
+    "Yoru",
+    "Hana",
+    "Tsuki",
+    "Yume",
+    "Kokoro",
+    "Ryu",
+    "Kami",
+    "Hoshi",
+    "Kaze",
+    "Yami",
+    "Taiyo",
+    "Tenshi",
+    "Sakura",
 ]
+
 
 def generate_app_name() -> str:
     """Generate random Japanese-style app name"""
     return "-".join(random.choices(JAPANESE_MOCK, k=3))
+
 
 def save_app_name():
     """Save the generated app name to a config file"""
@@ -165,17 +233,56 @@ def save_app_name():
             config.write(f)
     return config.get("teagram", "app_name", fallback=generate_app_name())
 
+
 JAPANESE_FEMALE_NAMES = [
-    "Sakura", "Yuki", "Haruka", "Hinata", "Ayame", "Takara", "Akari", "Kazumi",
-    "Suzu", "Rin", "Natsu", "Fuyu", "Ame", "Hotaru", "Mochi", "Hana", "Kumiko",
-    "Mizuho", "Miyu", "Aoi", "Midori", "Shinju", "Ayaka", "Nanami", "Emi",
-    "Yume", "Kanon", "Sayuri", "Mio", "Rika", "Nozomi", "Kokoro", "Hibiki",
-    "Kayo", "Miyuki", "Rina", "Yuna", "Kana", "Miyako", "Chihiro", "Yui"
+    "Sakura",
+    "Yuki",
+    "Haruka",
+    "Hinata",
+    "Ayame",
+    "Takara",
+    "Akari",
+    "Kazumi",
+    "Suzu",
+    "Rin",
+    "Natsu",
+    "Fuyu",
+    "Ame",
+    "Hotaru",
+    "Mochi",
+    "Hana",
+    "Kumiko",
+    "Mizuho",
+    "Miyu",
+    "Aoi",
+    "Midori",
+    "Shinju",
+    "Ayaka",
+    "Nanami",
+    "Emi",
+    "Yume",
+    "Kanon",
+    "Sayuri",
+    "Mio",
+    "Rika",
+    "Nozomi",
+    "Kokoro",
+    "Hibiki",
+    "Kayo",
+    "Miyuki",
+    "Rina",
+    "Yuna",
+    "Kana",
+    "Miyako",
+    "Chihiro",
+    "Yui",
 ]
+
 
 def generate_bot_name() -> str:
     """Generate random Japanese-style app name"""
     return random.choice(JAPANESE_FEMALE_NAMES) + "-chan"
+
 
 def save_bot_name() -> str:
     """Save the generated bot name to a config file"""
@@ -191,6 +298,7 @@ def save_bot_name() -> str:
             config.write(f)
     return config.get("teagram", "bot_name", fallback=generate_bot_name())
 
+
 def get_args(message: Message):
     """
     Returns a list of command arguments (split by spaces), excluding the prefix and command name.
@@ -198,6 +306,7 @@ def get_args(message: Message):
     """
     _, _, args = get_command(None, message)
     return args.split() if args else []
+
 
 def get_args_raw(message: Message):
     """
@@ -207,3 +316,29 @@ def get_args_raw(message: Message):
     _, _, args = get_command(None, message)
     return args or ""
 
+
+async def create_asset_group(
+    client: CustomClient,
+    group_name: str,
+    group_type: str = "private",
+    users: int | str | List[int | str] = None,
+) -> types.Chat:
+    """
+    Create a new group for asset management.
+
+    :param client: The client instance to use for creating the chat.
+    :param chat_name: The name of the chat to create.
+    :param chat_type: The type of chat to create (default is "private").
+    :return: The created chat object.
+    """
+    if group_type not in ["private", "group", "supergroup"]:
+        raise ValueError(
+            "Invalid chat type. Must be 'private', 'group', or 'supergroup'."
+        )
+    
+    async for dialog in client.get_dialogs():
+        chat = dialog.chat
+        if chat.type in ("supergroup", "group") and chat.title == group_name:
+            return chat
+
+    return await client.create_group(group_name, users=users)

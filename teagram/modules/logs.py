@@ -1,7 +1,19 @@
 from .. import loader, utils
 import os
-
+import logging
+from typing import Optional
 from pyrogram.types import Message
+
+
+class TelegramLogHandler(logging.Handler):
+    def __init__(self, send_func):
+        super().__init__()
+        self.send_func = send_func  # async function to send logs
+
+    def emit(self, record):
+        log_entry = self.format(record)
+        import asyncio
+        asyncio.create_task(self.send_func(log_entry))
 
 
 class Logs(loader.Module):
@@ -10,10 +22,39 @@ class Logs(loader.Module):
     # translate
     # inline buttons
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.log_chat_id: Optional[int] = None
+        self._log_handler: Optional[TelegramLogHandler] = None
+
+    @loader.command()
+    async def logschatcmd(self, message: Message):
+        """
+        — Set this chat as log receiver
+        """
+        self.log_chat_id = message.chat.id
+        if self._log_handler:
+            logging.getLogger().removeHandler(self._log_handler)
+        self._log_handler = TelegramLogHandler(self._send_log_to_chat)
+        self._log_handler.setLevel(logging.ERROR)  # Only errors by default
+        self._log_handler.setFormatter(logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        ))
+        logging.getLogger().addHandler(self._log_handler)
+        await message.reply("This chat is now set as log receiver. All ERROR logs will be sent here.")
+
+    async def _send_log_to_chat(self, log_entry: str):
+        if self.log_chat_id:
+            try:
+                await self.client.send_message(self.log_chat_id, f"<code>{log_entry}</code>", parse_mode="HTML")
+            except Exception:
+                pass
+
     @loader.command()
     async def logscmd(self, message: Message):
         """
-        — Send log file filtered by level (default: INFO)
+        [level] — Send log file filtered by level (default: INFO)
         Levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
         """
         args = utils.get_args_raw(message).strip().upper()
