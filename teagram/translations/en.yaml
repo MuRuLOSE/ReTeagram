@@ -46,3 +46,10 @@ loader:
   incompatible_version: "<b><emoji id=5210952531676504517>❗</emoji> Userbot's version is lower than required ({} < {})</b>"
   module_already_loaded: f"<b>🤷 Module <code>{}</code> has already loaded</b>"
   unload_core_module_fault: "<b>⛔ Core module can't be unloaded</b>"
+
+logs:
+  log_file_not_found: "<b>❌ Log file not found.</b>"
+  no_log_records: "<b>❌ No log records with level {level} or higher.</b>"
+  log_file_cleared: "<b>✅ Log file cleared.</b>"
+  failed_to_clear: "<b>❌ Failed to clear log file: {error}</b>"
+  log_chat_set: "<b>✅ This chat is now set as log receiver. All ERROR logs will be sent here.</b>"

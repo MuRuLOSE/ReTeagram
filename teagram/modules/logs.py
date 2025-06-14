@@ -19,9 +19,6 @@ class TelegramLogHandler(logging.Handler):
 class Logs(loader.Module):
     strings = {"name": "Logs"}
 
-    # translate
-    # inline buttons
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.log_chat_id: Optional[int] = None
@@ -30,7 +27,7 @@ class Logs(loader.Module):
     @loader.command()
     async def logschatcmd(self, message: Message):
         """
-        — Set this chat as log receiver
+        .logschat — Set this chat as log receiver
         """
         self.log_chat_id = message.chat.id
         if self._log_handler:
@@ -42,7 +39,7 @@ class Logs(loader.Module):
             datefmt="%Y-%m-%d %H:%M:%S"
         ))
         logging.getLogger().addHandler(self._log_handler)
-        await message.reply("This chat is now set as log receiver. All ERROR logs will be sent here.")
+        await message.reply(self.get("log_chat_set"))
 
     async def _send_log_to_chat(self, log_entry: str):
         if self.log_chat_id:
@@ -54,7 +51,7 @@ class Logs(loader.Module):
     @loader.command()
     async def logscmd(self, message: Message):
         """
-        [level] — Send log file filtered by level (default: INFO)
+        .logs [level] — Send log file filtered by level (default: INFO)
         Levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
         """
         args = utils.get_args_raw(message).strip().upper()
@@ -62,7 +59,7 @@ class Logs(loader.Module):
 
         log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "teagram.log")
         if not os.path.exists(log_path):
-            await message.reply("Log file not found.")
+            await message.reply(self.get("log_file_not_found"))
             return
 
         with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -73,7 +70,7 @@ class Logs(loader.Module):
         filtered = [line for line in lines if any(lvl in line for lvl in levels[min_level:])]
 
         if not filtered:
-            await message.reply(f"No log records with level {level} or higher.")
+            await message.reply(self.get("no_log_records").format(level=level))
             return
 
         text = "<code>" + "".join(filtered[-50:]).replace("<", "&lt;").replace(">", "&gt;") + "</code>"
@@ -88,12 +85,12 @@ class Logs(loader.Module):
     @loader.command()
     async def clearlogscmd(self, message: Message):
         """
-        — Clear the log file
+        .clearlogs — Clear the log file
         """
         log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "teagram.log")
         try:
             with open(log_path, "w", encoding="utf-8") as f:
                 f.write("")
-            await message.reply("Log file cleared.")
+            await message.reply(self.get("log_file_cleared"))
         except Exception as e:
-            await message.reply(f"Failed to clear log file: {e}")
+            await message.reply(self.get("failed_to_clear").format(error=e))

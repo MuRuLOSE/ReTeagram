@@ -110,7 +110,6 @@ class Manager(loader.Module):
     @loader.command()
     async def stop(self, message, args=None):
         await utils.answer(message, self.get("stopping"))
-
         kill(True)
 
     @loader.command()
@@ -223,7 +222,7 @@ class Manager(loader.Module):
             module_name = await self.load_module(code)
             await utils.answer(message, self.get("load_success").format(module_name))
         except (ModuleException, ModuleVersionException) as error:
-            return await utils.answer(message, error)
+            return await utils.answer(message, str(error))
 
     @loader.command(alias="ulm")
     async def unloadmod(self, message, args):
