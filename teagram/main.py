@@ -96,3 +96,7 @@ class Main:
 
         await idle()
         logging.info("Shutdown...")
+        file_handler.flush()
+        with open(log_file_path, 'w', encoding='utf-8'):
+            pass
+        await client.stop() # Trying avoid with database close issues

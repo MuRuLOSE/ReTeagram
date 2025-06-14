@@ -4,6 +4,7 @@ import logging
 from typing import Optional
 from pyrogram.types import Message
 
+from ..utils import BASE_PATH 
 
 class TelegramLogHandler(logging.Handler):
     def __init__(self, send_func):
@@ -17,10 +18,15 @@ class TelegramLogHandler(logging.Handler):
 
 
 class Logs(loader.Module):
-    strings = {"name": "Logs"}
+    strings = {
+        "name": "Logs",
+        "logs": "{}</pre>"
+    }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    # inline buttons
+    # localized strings
+
+    def __init__(self):
         self.log_chat_id: Optional[int] = None
         self._log_handler: Optional[TelegramLogHandler] = None
 
@@ -57,7 +63,7 @@ class Logs(loader.Module):
         args = utils.get_args_raw(message).strip().upper()
         level = args if args in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] else "INFO"
 
-        log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "teagram.log")
+        log_path = os.path.join(BASE_PATH, "teagram.log")
         if not os.path.exists(log_path):
             await message.reply(self.get("log_file_not_found"))
             return
@@ -73,14 +79,14 @@ class Logs(loader.Module):
             await message.reply(self.get("no_log_records").format(level=level))
             return
 
-        text = "<code>" + "".join(filtered[-50:]).replace("<", "&lt;").replace(">", "&gt;") + "</code>"
+        text = "<pre language='log'>" + "".join(filtered[-50:]).replace("<", "&lt;").replace(">", "&gt;") + "</pre>"
         if len(text) > 4000 or len(filtered) > 50:
             from io import BytesIO
             file = BytesIO("".join(filtered).encode("utf-8"))
             file.name = f"teagram-{level.lower()}-logs.txt"
             await message.reply_document(file, caption=f"Logs (level: {level})")
         else:
-            await message.reply(text, parse_mode="HTML")
+            await utils.answer(message, text)
 
     @loader.command()
     async def clearlogscmd(self, message: Message):

@@ -58,7 +58,11 @@ def get_uptime() -> str:
 
 def get_command(database, message: Message):
     message.raw_text = getattr(message.raw, "message", message.text)
-    prefixes = database.get("teagram", "prefix", ["."])
+    if database is not None:
+        prefixes = database.get("teagram", "prefix", ["."])
+    else:
+        prefixes = ["."]
+
 
     for prefix in prefixes:
         if (
