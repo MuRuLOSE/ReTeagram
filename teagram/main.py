@@ -9,6 +9,7 @@ import asyncio
 import logging
 import sys
 import colorlog
+import os
 
 use_colors = sys.stdout.isatty()
 
@@ -35,6 +36,16 @@ logging.basicConfig(
     level=logging.INFO,
     handlers=[handler]
 )
+
+# Добавляем FileHandler для логирования в файл
+log_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "teagram.log")
+file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
+file_handler.setFormatter(logging.Formatter(
+    "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+))
+
+logging.getLogger().addHandler(file_handler)
 
 LOGGERS = ["pyrogram", "aiogram", "aiohttp.access", "watchfiles.main"]
 for logger in LOGGERS:
