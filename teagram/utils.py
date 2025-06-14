@@ -191,3 +191,19 @@ def save_bot_name() -> str:
             config.write(f)
     return config.get("teagram", "bot_name", fallback=generate_bot_name())
 
+def get_args(message: Message):
+    """
+    Returns a list of command arguments (split by spaces), excluding the prefix and command name.
+    Example: For the message `.test foo bar`, returns ["foo", "bar"].
+    """
+    _, _, args = get_command(None, message)
+    return args.split() if args else []
+
+def get_args_raw(message: Message):
+    """
+    Returns the raw string of command arguments (everything after the command name), excluding the prefix and command name.
+    Example: For the message `.test foo bar`, returns "foo bar".
+    """
+    _, _, args = get_command(None, message)
+    return args or ""
+
