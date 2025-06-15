@@ -1,37 +1,39 @@
-import typing
+from typing import List, Dict, Final, Any, Optional
 import types
-
 from .client import CustomClient
 from .database import Database
 from .translator import Translator, ModuleTranslator
-
 from importlib.abc import SourceLoader
 from abc import ABC, abstractmethod
 
 
 class ABCLoader(ABC):
+    """
+    Abstract base loader for modules.
+    """
+
     def __init__(self, client: CustomClient, database: Database):
-        self.client: CustomClient
-        self.database: Database
+        self.client: CustomClient = client
+        self.database: Database = database
 
-        self.modules: typing.List[Module]
-        self.core_modules: typing.Final[typing.List[str]]
+        self.modules: List[Module] = []
+        self.core_modules: Final[List[str]] = []
 
-        self.commands: typing.Dict[str, types.FunctionType]
-        self.aliases: typing.Dict[str, types.FunctionType]
+        self.commands: Dict[str, types.FunctionType] = {}
+        self.aliases: Dict[str, types.FunctionType] = {}
 
-        self.raw_handlers: typing.List[types.FunctionType]
-        self.watchers: typing.List[types.FunctionType]
+        self.raw_handlers: List[types.FunctionType] = []
+        self.watchers: List[types.FunctionType] = []
 
-        self.inline_handlers: typing.Dict[str, types.FunctionType]
-        self.callback_handlers: typing.Dict[str, types.FunctionType]
+        self.inline_handlers: Dict[str, types.FunctionType] = {}
+        self.callback_handlers: Dict[str, types.FunctionType] = {}
 
-        self.message_handlers: typing.List[types.FunctionType]
+        self.message_handlers: List[types.FunctionType] = []
 
-        self.dispatcher: typing.Any
-        self.inline_dispatcher: typing.Any
+        self.dispatcher: Any = None
+        self.inline_dispatcher: Any = None
 
-        self.translator: Translator
+        self.translator: Translator = None
 
     @abstractmethod
     async def load_module(self, *args, **kwargs):
@@ -47,20 +49,28 @@ class ABCLoader(ABC):
 
 
 class ModuleException(Exception):
+    """Base exception for module errors."""
+
     pass
 
 
 class ModuleVersionException(Exception):
+    """Exception for module version mismatch."""
+
     pass
 
 
 class Module:
-    MIN_VERSION = "BETA"
-    MODULE_VERSION = "Not specified"
+    """
+    Base class for all modules.
+    """
+
+    MIN_VERSION: str = "BETA"
+    MODULE_VERSION: str = "Not specified"
 
     translator: ModuleTranslator
 
-    def get(self, key: str) -> typing.Optional[str]:
+    def get(self, key: str) -> Optional[str]:
         return self.translator.get(key)
 
     def load_init(self):
@@ -85,33 +95,37 @@ class Module:
 
 
 class StringLoader(SourceLoader):
+    """
+    Loads Python source code from a string.
+    """
+
     def __init__(self, data: str, origin: str) -> None:
         self.data = data.encode("utf-8")
         self.origin = origin
 
     def get_code(self, full_name: str):
-        if source := self.get_source(full_name):
+        source = self.get_source(full_name)
+        if source:
             return compile(source, self.origin, "exec", dont_inherit=True)
-        else:
-            return None
+        return None
 
     def get_filename(self, _: str) -> str:
         return self.origin
 
-    def get_data(self, _: str) -> str:
+    def get_data(self, _: str) -> bytes:
         return self.data
 
 
-def get_methods(cls, end: str, attribute: str = ""):
+def get_methods(cls, end: str, attribute: str = "") -> Dict[str, types.FunctionType]:
+    """
+    Collects methods from a class by suffix or attribute.
+    """
     methods = {}
-
     for method_name in dir(cls):
         method = getattr(cls, method_name)
-
         if callable(method) and (
             method_name.endswith(end) or hasattr(method, attribute)
         ):
             key = method_name.replace(end, "")
             methods[key] = method
-
     return methods

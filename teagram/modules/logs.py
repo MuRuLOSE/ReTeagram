@@ -3,6 +3,7 @@ import os
 import logging
 from typing import Optional
 from pyrogram.types import Message
+from dataclasses import dataclass, field
 
 from ..utils import BASE_PATH 
 
@@ -26,16 +27,24 @@ class Logs(loader.Module):
     # inline buttons
     # localized strings
 
+    @dataclass
+    class Config(loader.ModuleConfig):
+        log_chat_id: Optional[int] = field(
+            default=None,
+            metadata={"description": "Chat ID to send logs to (if set)."
+        })
+
     def __init__(self):
-        self.log_chat_id: Optional[int] = None
         self._log_handler: Optional[TelegramLogHandler] = None
+
+    def save_config(self):
+        self.config.save(self)
 
     @loader.command()
     async def logschatcmd(self, message: Message):
-        """
-        .logschat — Set this chat as log receiver
-        """
-        self.log_chat_id = message.chat.id
+        """— Set this chat as log receiver"""
+        self.config.log_chat_id = message.chat.id
+        self.save_config()
         if self._log_handler:
             logging.getLogger().removeHandler(self._log_handler)
         self._log_handler = TelegramLogHandler(self._send_log_to_chat)
@@ -48,16 +57,16 @@ class Logs(loader.Module):
         await message.reply(self.get("log_chat_set"))
 
     async def _send_log_to_chat(self, log_entry: str):
-        if self.log_chat_id:
+        if self.config.log_chat_id:
             try:
-                await self.client.send_message(self.log_chat_id, f"<code>{log_entry}</code>", parse_mode="HTML")
+                await self.client.send_message(self.config.log_chat_id, f"<code>{log_entry}</code>", parse_mode="HTML")
             except Exception:
                 pass
 
     @loader.command()
     async def logscmd(self, message: Message):
         """
-        .logs [level] — Send log file filtered by level (default: INFO)
+        [level] — Send log file filtered by level (default: INFO)
         Levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
         """
         args = utils.get_args_raw(message).strip().upper()
@@ -84,14 +93,14 @@ class Logs(loader.Module):
             from io import BytesIO
             file = BytesIO("".join(filtered).encode("utf-8"))
             file.name = f"teagram-{level.lower()}-logs.txt"
-            await message.reply_document(file, caption=f"Logs (level: {level})")
+            await message.reply_document(file, caption=self.get("log_file_caption").format(level=level))
         else:
             await utils.answer(message, text)
 
     @loader.command()
     async def clearlogscmd(self, message: Message):
         """
-        .clearlogs — Clear the log file
+        — Clear the log file
         """
         log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "teagram.log")
         try:
