@@ -121,11 +121,17 @@ class Manager(loader.Module):
 
     @loader.command()
     async def stop(self, message, args=None):
+        """
+        — stop the userbot process
+        """
         await utils.answer(message, self.get("stopping"))
         kill(True)
 
     @loader.command()
     async def restart(self, message):
+        """
+        — restart the userbot process
+        """
         message = await utils.answer(message, self.get("restarting"))
         atexit.register(restart)
 
@@ -139,6 +145,9 @@ class Manager(loader.Module):
 
     @loader.command()
     async def update(self, message):
+        """
+        — update userbot from git and restart
+        """
         message = await utils.answer(message, self.get("checking_updates"))
 
         try:
@@ -166,6 +175,9 @@ class Manager(loader.Module):
 
     @loader.command(alias="ch_branch")
     async def change_branch(self, message):
+        """
+        — switch between main/dev git branches
+        """
         branch_name = ""
         try:
             repo = git.Repo(os.path.abspath("."))
@@ -203,6 +215,9 @@ class Manager(loader.Module):
 
     @loader.command(alias="lm")
     async def loadmod(self, message: Message):
+        """
+        <file> — load a module from file
+        """
         reply = message.reply_to_message
         module_not_found = self.get("module_not_found")
 
@@ -238,6 +253,9 @@ class Manager(loader.Module):
 
     @loader.command(alias="ulm")
     async def unloadmod(self, message, args):
+        """
+        <module> — unload a module by name
+        """
         module = args.strip()
         if not self.loader.lookup(module):
             return await utils.answer(message, self.get("module_not_found"))
@@ -271,6 +289,9 @@ class Manager(loader.Module):
 
     @loader.command()
     async def setlang(self, message, args: str):
+        """
+        <lang> — set the interface language
+        """
         language = args.strip().lower()
         if language not in SUPPORTED_LANGUAGES:
             return await utils.answer(
@@ -285,6 +306,9 @@ class Manager(loader.Module):
 
     @loader.command()
     async def addprefix(self, message, args: str):
+        """
+        <prefix> — add a new command prefix
+        """
         prefix = args.split(" ")[0]
         if not prefix:
             return await utils.answer(message, self.get("invalid_prefix"))
@@ -298,6 +322,9 @@ class Manager(loader.Module):
 
     @loader.command()
     async def delprefix(self, message, args: str):
+        """
+        <prefix> — remove a command prefix
+        """
         prefix = args.split(" ")[0]
         if not prefix:
             return await utils.answer(message, self.get("invalid_prefix"))
@@ -318,7 +345,7 @@ class Manager(loader.Module):
     @loader.command()
     async def setconfig(self, message: Message, args: str):
         """
-        .setconfig <module> <key> <value> — change module config value
+        <module> <key> <value> — change module config value
         """
         import typing
 
@@ -365,7 +392,7 @@ class Manager(loader.Module):
     @loader.command()
     async def getconfig(self, message: Message, args: str):
         """
-        .getconfig <module> <key> — get module config value
+        <module> <key> — get module config value
         """
         parts = args.strip().split(maxsplit=1)
         if len(parts) != 2:
@@ -389,7 +416,7 @@ class Manager(loader.Module):
     @loader.command()
     async def showconfig(self, message: Message, args: str):
         """
-        .showconfig <module> — show all config values for module
+        <module> — show all config values for module
         """
         module_name = args.strip()
         module = self.loader.lookup(module_name)
