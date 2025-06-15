@@ -1,6 +1,8 @@
 import logging
 import asyncio
 
+from sqlite3 import OperationalError
+
 from os import remove
 from sys import exit
 
@@ -172,7 +174,7 @@ class Authorization:
         except errors.SessionRevoked:
             logger.error("Session revoked, deleting session file.")
             try:
-                remove("teagram_v2.session")
+                remove("teagram_v2.session") # ReTeagram in future
             except PermissionError:
                 logger.info(
                     "No permission to delete session file, please remove manually."
@@ -182,6 +184,10 @@ class Authorization:
             return False
         except errors.unauthorized_401.SessionPasswordNeeded:
             await self.get_password()
+        except OperationalError as e:
+            if "database is locked" in str(e):
+                logger.critical("Database is locked, please close other instances (or restart system if not help, otherwise remove session and login again).")
+            exit(1)
         finally:
             try:
                 await self.client.disconnect()
