@@ -83,7 +83,7 @@ class ProxyTunnel:
 
         asyncio.ensure_future(get_url())
         try:
-            await asyncio.wait_for(self.proxy_created.wait(), 10)  # увеличьте таймаут
+            await asyncio.wait_for(self.proxy_created.wait(), 10)
         except Exception:
             pass
 

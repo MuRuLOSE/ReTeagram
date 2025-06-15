@@ -1,22 +1,18 @@
+from typing import Final, List, Any, Type
 import inspect
 import logging
-
 import sys
 import gc
 import os
 import re
-
+from dataclasses import asdict, fields
+from pathlib import Path
 from importlib.machinery import ModuleSpec
 from importlib.util import spec_from_file_location, module_from_spec
-
 from pyrogram.handlers.handler import Handler
-
-from pathlib import Path
-from typing import Final, List
 
 from .utils import BASE_PATH
 from . import __version__
-
 from .dispatcher import Dispatcher
 from .types import (
     Module,
@@ -25,7 +21,6 @@ from .types import (
     ModuleVersionException,
     ABCLoader,
 )
-
 from .inline import InlineDispatcher
 from .translator import Translator, ModuleTranslator
 
@@ -86,8 +81,6 @@ def callback_handler(custom_filters=None, *args, **kwargs):
         if custom_filters:
             setattr(func, "_filters", custom_filters)
 
-            print(func, func._filters)
-
         return set_attrs(func, *args, **kwargs, is_callback_handler=True)
 
     return decorator
@@ -103,40 +96,57 @@ def message_handler(custom_filters=None, *args, **kwargs):
     return decorator
 
 
+class ModuleConfig:
+    """
+    Base class for module configs using dataclasses. Handles load/save from database automatically.
+    """
+    @classmethod
+    def from_dict(cls: Type['ModuleConfig'], data: dict) -> 'ModuleConfig':
+        kwargs = {f.name: data.get(f.name, f.default) for f in fields(cls)}
+        return cls(**kwargs)
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def load(cls: Type['ModuleConfig'], module_instance: Any) -> 'ModuleConfig':
+        db = getattr(module_instance, 'database', None)
+        if db:
+            data = db.get(module_instance.__class__.__name__, 'config', {})
+            return cls.from_dict(data)
+        return cls()
+
+    def save(self, module_instance: Any) -> None:
+        db = getattr(module_instance, 'database', None)
+        if db:
+            db.set(module_instance.__class__.__name__, 'config', self.to_dict())
+
+
 class Loader(ABCLoader):
-    def __init__(self, client, database, arguments):
+    """
+    Main loader for modules, commands, and handlers.
+    """
+    def __init__(self, client: Any, database: Any, arguments: Any):
         self.client = client
         self.database = database
-
-        self.modules = []
+        self.modules: List[Module] = []
         self.core_modules: Final[List[str]] = [
-            "eval",
-            "help",
-            "info",
-            "manager",
-            "terminal",
+            "eval", "help", "info", "manager", "terminal", "logs"
         ]
-
-        self.commands = {}
-        self.aliases = {}
-
-        self.raw_handlers = []
-        self.watchers = []
-
-        self.inline_handlers = {}
-        self.callback_handlers = {}
-
-        self.message_handlers = []
-
+        self.commands: dict = {}
+        self.aliases: dict = {}
+        self.raw_handlers: list = []
+        self.watchers: list = []
+        self.inline_handlers: dict = {}
+        self.callback_handlers: dict = {}
+        self.message_handlers: list = []
         self.dispatcher = Dispatcher(client, self)
         self.inline = InlineDispatcher(self)
-
         self.translator = Translator(self.database)
-
         if getattr(arguments, "hot_reload", False):
             self.start_watchdog()
 
-    def get(self, key: str):
+    def get(self, key: str) -> str:
         return self.translator.get("loader", key)
 
     def _get_module_path(self, file_path: Path) -> str | None:
@@ -147,7 +157,7 @@ class Loader(ABCLoader):
 
         return None
 
-    def start_watchdog(self):
+    def start_watchdog(self) -> Any:
         try:
             from .hot_reload import ModulesWatchdog
 
@@ -164,7 +174,7 @@ class Loader(ABCLoader):
 
             return self.get("no_watchdog_library")
 
-    async def load(self):
+    async def load(self) -> None:
         await self.load_modules()
 
         await self.dispatcher.load()
@@ -172,7 +182,7 @@ class Loader(ABCLoader):
 
         logging.info("Loaded!")
 
-    async def load_modules(self):
+    async def load_modules(self) -> None:
         for path in MODULES_PATH.glob("*.py"):
             module_name = f"teagram.modules.{path.stem}"
             if path.stem.lower() not in self.core_modules:
@@ -196,7 +206,7 @@ class Loader(ABCLoader):
         module_source: str = "",
         save_file: bool = False,
         watchdog: bool = False,
-    ):
+    ) -> Any:
         if spec is None:
             if origin != "<core>":
                 logging.debug("Module spec not found, trying to get manually..")
@@ -271,7 +281,7 @@ class Loader(ABCLoader):
         gc.collect()
         return module_class
 
-    async def unload_module(self, module_name: str, *, _watchdog: bool):
+    async def unload_module(self, module_name: str, *, _watchdog: bool) -> str:
         module = None
         for mod in self.modules:
             if module_name.lower() in mod.__class__.__name__.lower():
@@ -310,15 +320,20 @@ class Loader(ABCLoader):
                 k: v for k, v in self.aliases.items() if k not in module.commands.keys()
             }
 
-        return module.__class__.__name__
+        return module.__class__.__name__ if module else ""
 
-    def prepare_module(self, module_class: Module):
+    def prepare_module(self, module_class: Module) -> None:
         if module_class.__origin__ == "<core>":
             module_class.loader = self
 
         module_class.client = self.client
         module_class.database = self.database
         module_class.inline = self.inline
+
+        # Auto-load config if dataclass Config exists
+        config_cls = getattr(module_class, "Config", None)
+        if config_cls and hasattr(config_cls, "load"):
+            module_class.config = config_cls.load(module_class)
 
         module_class.load_init()
         module_class.translator = ModuleTranslator(
@@ -347,13 +362,14 @@ class Loader(ABCLoader):
 
         self.modules.append(module_class)
 
-    def lookup(self, name: str):
+    def lookup(self, name: str) -> Any:
+        name = name.lower()
         return next(
             (
                 module
                 for module in self.modules
-                if module.__class__.__name__ == name
-                or getattr(module, "name", "") == name
+                if module.__class__.__name__.lower() == name
+                or getattr(module, "name", "").lower() == name
             ),
             None,
         )

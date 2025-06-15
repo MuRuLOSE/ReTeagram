@@ -1,7 +1,7 @@
 $(document).ready(function() {
   var translations = {
     en: {
-      "welcome_message": "Welcome to Teagram-v2. To start, press button below and follow instructions.",
+      "welcome_message": "Welcome to Re:Teagram. To start, press button below and follow instructions.",
       "welcome_button": "Get Started",
       "enter_tokens_title": "Enter API Tokens",
       "token_instruction1": "Visit the website <a href='https://my.telegram.org' target='_blank'>my.telegram.org</a>",
@@ -31,10 +31,11 @@ $(document).ready(function() {
       "set_password_placeholder": "Enter new password",
       "set_password_button": "Set Password",
       "wrong_password": "Wrong password, please try again.",
-      "password_required": "Password required to continue."
+      "password_required": "Password required to continue.",
+      "skip_password": "Skip"
     },
     ru: {
-      "welcome_message": "Добро пожаловать в Teagram-v2. Чтобы начать, нажмите кнопку ниже и следуйте инструкциям.",
+      "welcome_message": "Добро пожаловать в Re:Teagram. Чтобы начать, нажмите кнопку ниже и следуйте инструкциям.",
       "welcome_button": "Начать",
       "enter_tokens_title": "Введите API токены",
       "token_instruction1": "Зайдите на сайт <a href='https://my.telegram.org' target='_blank'>my.telegram.org</a>",
@@ -64,7 +65,8 @@ $(document).ready(function() {
       "set_password_placeholder": "Введите новый пароль",
       "set_password_button": "Установить пароль",
       "wrong_password": "Неверный пароль, попробуйте снова.",
-      "password_required": "Для продолжения требуется пароль."
+      "password_required": "Для продолжения требуется пароль.",
+      "skip_password": "Пропустить"
     }
   };
 
@@ -74,6 +76,7 @@ $(document).ready(function() {
   var currentLanguage = "en";
   var phoneAuthActive = false;
   var pendingMessages = [];
+  var passwordRequired = true;
 
   function translatePage(animated) {
     animated = typeof animated !== 'undefined' ? animated : true;
@@ -131,6 +134,7 @@ $(document).ready(function() {
           <h2>${translations[currentLanguage]["set_password_title"]}</h2>
           <input type="password" id="set_password_input" class="form-control" placeholder="${translations[currentLanguage]["set_password_placeholder"]}">
           <button id="set-password-btn" class="btn btn-primary">${translations[currentLanguage]["set_password_button"]}</button>
+          <button id="skip-password-btn" class="btn btn-secondary" style="margin-left:10px;">${translations[currentLanguage]["skip_password"]}</button>
           <div id="set-password-error" style="color:red;display:none;margin-top:10px;"></div>
         </div>
       `;
@@ -140,6 +144,7 @@ $(document).ready(function() {
           <h2>${translations[currentLanguage]["password_required"]}</h2>
           <input type="password" id="enter_password_input" class="form-control" placeholder="${translations[currentLanguage]["password_placeholder"]}">
           <button id="enter-password-btn" class="btn btn-primary">${translations[currentLanguage]["submit_password"]}</button>
+          <button id="skip-password-btn" class="btn btn-secondary" style="margin-left:10px;">${translations[currentLanguage]["skip_password"]}</button>
           <div id="enter-password-error" style="color:red;display:none;margin-top:10px;"></div>
         </div>
       `;
@@ -147,13 +152,20 @@ $(document).ready(function() {
     $("#login-container").children(".window.active").removeClass("active").hide();
     $("#login-container").append(html);
 
+    $("#skip-password-btn").off("click").on("click", function() {
+      passwordRequired = false;
+      showLoadingSection();
+      ws.send(JSON.stringify({type: "set_password", content: ""}));
+    });
+
     if (type === "set") {
       $("#set-password-btn").off("click").on("click", function() {
         var pwd = $("#set_password_input").val();
         if (!pwd) {
-          $("#set-password-error").text(translations[currentLanguage]["password_required"]).show();
+          $("#set-password-error").text(translations[currentLanguage]["password_required"]).fadeIn(200).delay(2000).fadeOut(400);
           return;
         }
+        showLoadingSection();
         ws.send(JSON.stringify({type: "set_password", content: pwd}));
         $("#set-password-btn").prop("disabled", true);
       });
@@ -162,13 +174,20 @@ $(document).ready(function() {
       $(document).on("click", "#enter-password-btn", function() {
         var pwd = $("#enter_password_input").val();
         if (!pwd) {
-          $("#enter-password-error").text(translations[currentLanguage]["password_required"]).show();
+          $("#enter-password-error").text(translations[currentLanguage]["password_required"]).fadeIn(200).delay(2000).fadeOut(400);
           return;
         }
+        showLoadingSection();
         ws.send(JSON.stringify({type: "password", content: pwd}));
         $("#enter-password-btn").prop("disabled", true);
       });
     }
+  }
+
+  function showLoadingSection() {
+    $("#login-container").children(".window.active").removeClass("active").hide();
+    var html = `<div id="loading-section" class="window active"><h2>Loading...</h2></div>`;
+    $("#login-container").append(html);
   }
 
   function processMessage(msg) {
@@ -176,6 +195,11 @@ $(document).ready(function() {
     function updateMessage(text) {
       $message.fadeOut(200, function() {
         $(this).text(text).fadeIn(200);
+        if (text) {
+          setTimeout(function() {
+            $message.fadeOut(400, function() { $message.empty().show(); });
+          }, 2000);
+        }
       });
     }
     switch (msg.type) {
@@ -186,13 +210,13 @@ $(document).ready(function() {
         showPasswordWindow("enter");
         break;
       case "wrong_password":
-        $("#enter-password-error").text(translations[currentLanguage]["wrong_password"]).show();
+        $("#enter-password-error").text(translations[currentLanguage]["wrong_password"]).fadeIn(200).delay(2000).fadeOut(400);
         $("#enter-password-btn").prop("disabled", false);
         break;
       case "password_set":
         $("#set-password-section").fadeOut(200, function() {
           $(this).remove();
-          showWindow("tokens-section");
+          showLoadingSection();
         });
         break;
       case "enter_tokens":
@@ -201,6 +225,7 @@ $(document).ready(function() {
         break;
       case "qr_login":
         if (phoneAuthActive) break;
+        $("#loading-section").fadeOut(200, function() { $(this).remove(); });
         showWindow("qr-section");
         $("#qr-container").empty();
         const qrCode = new QRCodeStyling({

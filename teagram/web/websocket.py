@@ -122,7 +122,8 @@ class WebsocketServer:
                 await ws.close(code=4001, message=b"Password required")
                 return ws
 
-            if msg.get("type") != "password" or not self.check_password(msg.get("content", "")):
+            # Позволяем пропустить пароль, если content пустой
+            if msg.get("type") != "password" or (msg.get("content") and not self.check_password(msg.get("content", ""))):
                 await ws.send_json({"type": "error", "content": "Wrong password"})
                 await ws.close(code=4002, message=b"Wrong password")
                 return ws
@@ -135,13 +136,14 @@ class WebsocketServer:
                 await ws.close(code=4003, message=b"Password not set")
                 return ws
 
-            if msg.get("type") != "set_password" or not msg.get("content"):
+            # Позволяем пропустить установку пароля (content пустой)
+            if msg.get("type") != "set_password":
                 await ws.send_json({"type": "error", "content": "Password not set"})
                 await ws.close(code=4004, message=b"Password not set")
                 return ws
-
-            self.set_password_hash(msg.get("content"))
-            await ws.send_json({"type": "message", "content": "Password set successfully"})
+            if msg.get("content"):
+                self.set_password_hash(msg.get("content"))
+                await ws.send_json({"type": "message", "content": "Password set successfully"})
             await ws.send_json({"type": "password_set"})
 
         if self.session_token == session_token and self.last_request:

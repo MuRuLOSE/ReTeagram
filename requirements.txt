@@ -1,4 +1,4 @@
-git+https://github.com/KurimuzonAkuma/pyrogram.git
+git+https://github.com/KurimuzonAkuma/pyrogram.git # 2.2.4 !!!
 qrcode==7.4.2
 psutil>=6.0.0
 ujson>=5.10.0

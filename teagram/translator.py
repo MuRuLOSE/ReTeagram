@@ -1,6 +1,6 @@
 from os import listdir
 import yaml
-import typing
+from typing import Dict, Optional, Any
 
 SUPPORTED_LANGUAGES = [
     lang[:-5] for lang in listdir("teagram/translations") if lang.endswith(".yaml")
@@ -8,9 +8,13 @@ SUPPORTED_LANGUAGES = [
 
 
 class Translator:
-    def __init__(self, database):
+    """
+    Loads and manages translations for the userbot.
+    """
+
+    def __init__(self, database: Any):
         self.database = database
-        self.translations: typing.Dict[str, typing.Dict[str, str]] = {}
+        self.translations: Dict[str, Dict[str, str]] = {}
 
         self.fetch_translations()
 
@@ -41,19 +45,21 @@ class Translator:
         except FileNotFoundError:
             self.translations = {}
 
-    def __getitem__(self, section: str, key: str) -> typing.Optional[str]:
+    def get(self, section: str, key: str) -> Optional[str]:
+        """Get translation for section/key."""
         return self.translations.get(section, {}).get(key)
-
-    def get(self, section: str, key: str) -> typing.Optional[str]:
-        return self.__getitem__(section, key)
 
 
 class ModuleTranslator:
+    """
+    Provides translation for a specific module.
+    """
+
     def __init__(
         self,
-        module_class,
-        translator: "Translator",
-        module_translations: typing.Optional[typing.Dict[str, str]] = None,
+        module_class: Any,
+        translator: Translator,
+        module_translations: Optional[Dict[str, str]] = None,
     ):
         self.module_name = (
             module_class.__class__.__name__.lower()
@@ -69,11 +75,9 @@ class ModuleTranslator:
 
         self.translator = translator
 
-    def __getitem__(self, key: str) -> typing.Optional[str]:
+    def get(self, key: str) -> Optional[str]:
+        """Get translation for a key in this module."""
         translations = self.translator.translations.get(
             self.module_name, self.module_translations
         )
         return translations.get(key) if translations else None
-
-    def get(self, key: str) -> typing.Optional[str]:
-        return self[key]

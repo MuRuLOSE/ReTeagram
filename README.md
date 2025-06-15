@@ -38,3 +38,11 @@ git clone https://github.com/MuRuLOSE/ReTeagram.git && cd ReTeagram && pip insta
 
 <i>* - Not tested</i><br>
 <i>** - Not full support</i>
+
+---
+
+## Disclaimer
+
+> **Re:Teagram is provided "as is" without any warranty. You use this userbot at your own risk. The authors and contributors are not responsible for any consequences of its use, including account bans, data loss, or any other issues.**
+
+> **Userbots are not prohibited by the official [Telegram Terms of Service](https://core.telegram.org/api/terms), but you should not use this software for malicious purposes, spam, or to violate Telegram's or any third-party rules. Running harmful code or abusing the platform may result in your account being restricted or banned. Always use responsibly.**
